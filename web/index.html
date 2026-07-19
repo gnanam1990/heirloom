@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heirloom — the wallet that can't be lost</title>
+<meta name="description" content="Heirloom makes money liveness-aware. Lost keys, lost people, lost agents — funds never get stranded. Built on Arc.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --vault:#0E1B16; --panel:#142219; --line:#24382C;
+    --brass:#C8A24B; --brass-dim:#8a7136;
+    --ivory:#EFEAD8; --faded:#8FA294; --alert:#C96A4A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--vault);color:var(--ivory);font-family:'Sora',sans-serif;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--brass);text-decoration:none}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+
+  /* header */
+  header{display:flex;justify-content:space-between;align-items:center;padding:28px 0}
+  .mark{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.5rem;letter-spacing:.12em;text-transform:uppercase}
+  .mark .key{color:var(--brass)}
+  nav a{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded);margin-left:28px}
+  nav a:hover{color:var(--brass)}
+
+  /* hero */
+  .hero{padding:72px 0 56px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);margin-bottom:22px}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(2.6rem,6vw,4.4rem);line-height:1.06;max-width:15ch}
+  h1 em{font-style:italic;color:var(--brass)}
+  .hero p.sub{max-width:52ch;margin-top:22px;color:var(--faded);font-size:1.05rem}
+  .cta-row{margin-top:34px;display:flex;gap:16px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:13px 26px;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--brass);color:var(--brass);background:transparent;cursor:pointer;transition:background .2s,color .2s}
+  .btn.solid{background:var(--brass);color:var(--vault);font-weight:600}
+  .btn:hover{background:var(--brass);color:var(--vault)}
+  .btn.solid:hover{background:var(--ivory);border-color:var(--ivory)}
+
+  /* heartbeat demo — the signature */
+  .pulse-card{margin-top:52px;background:var(--panel);border:1px solid var(--line);padding:26px 28px;max-width:560px}
+  .pulse-head{display:flex;align-items:center;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--brass);animation:beat 1.6s infinite}
+  @keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+  .pulse-state{font-family:'Cormorant Garamond',serif;font-size:2rem;margin:14px 0 4px;color:var(--ivory)}
+  .pulse-state.warn{color:var(--alert)}
+  .pulse-sub{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--faded);min-height:1.4em}
+  .meter{height:3px;background:var(--line);margin:18px 0}
+  .meter i{display:block;height:100%;background:var(--brass);width:0%}
+  .pulse-card button{margin-top:6px}
+  .pulse-note{font-size:.72rem;color:var(--faded);margin-top:14px}
+
+  section{padding:72px 0;border-bottom:1px solid var(--line)}
+  h2{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(1.8rem,3.4vw,2.6rem);margin-bottom:14px}
+  .lede{color:var(--faded);max-width:58ch;margin-bottom:40px}
+
+  /* problem */
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+  .stat{background:var(--vault);padding:26px}
+  .stat b{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.9rem;color:var(--brass);display:block;margin-bottom:6px}
+  .stat span{font-size:.85rem;color:var(--faded)}
+
+  /* ladder */
+  .ladder{border-left:1px solid var(--brass-dim);margin-left:8px}
+  .rung{position:relative;padding:22px 0 22px 34px}
+  .rung::before{content:"";position:absolute;left:-5px;top:32px;width:9px;height:9px;background:var(--vault);border:1px solid var(--brass)}
+  .rung .t{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
+  .rung h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.35rem;margin:6px 0 4px}
+  .rung p{color:var(--faded);font-size:.92rem;max-width:56ch}
+  .rung.reset .t{color:var(--ivory)}
+  .rung.reset::before{background:var(--brass)}
+
+  /* covers */
+  .covers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+  .cover{background:var(--vault);padding:26px}
+  .cover .t{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);display:block;margin-bottom:10px}
+  .cover h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.3rem;margin-bottom:8px}
+  .cover p{font-size:.88rem;color:var(--faded)}
+
+  /* invariant */
+  .invariant{background:var(--panel);border:1px solid var(--line);padding:44px 34px;text-align:center}
+  .invariant blockquote{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.5rem,3vw,2.2rem);line-height:1.3;max-width:26ch;margin:0 auto 16px}
+  .invariant p{color:var(--faded);font-size:.9rem;max-width:60ch;margin:0 auto}
+
+  footer{padding:44px 0 60px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:18px;color:var(--faded);font-size:.78rem}
+  footer .foot-mark{font-family:'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase}
+  footer .warn{color:var(--alert)}
+
+  @media (prefers-reduced-motion: reduce){
+    .dot{animation:none}
+    html{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">Heir<span class="key">loom</span></div>
+    <nav aria-label="Main">
+      <a href="#ladder">Mechanism</a>
+      <a href="#covers">Coverage</a>
+      <a href="https://github.com/gnanam1990/heirloom">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="hero" style="border-top:1px solid var(--line)">
+    <p class="eyebrow">Liveness-aware money · non-custodial</p>
+    <h1>The wallet that <em>can't be lost.</em></h1>
+    <p class="sub">Not to death, not to forgetting, not to thieves. Money today assumes its owner is alive, present, and remembers everything. Heirloom removes that assumption — so funds never get stranded.</p>
+    <div class="cta-row">
+      <a class="btn solid" href="https://github.com/gnanam1990/heirloom">View the contracts</a>
+      <a class="btn" href="#ladder">How it works</a>
+    </div>
+
+    <div class="pulse-card" id="demo">
+      <div class="pulse-head"><span class="dot" id="dot"></span> Vault · liveness ladder — accelerated demo</div>
+      <div class="pulse-state" id="state">Active</div>
+      <div class="pulse-sub" id="sub">Owner activity detected. Clock reset.</div>
+      <div class="meter" aria-hidden="true"><i id="bar"></i></div>
+      <button class="btn" id="beatBtn" type="button">Sign heartbeat</button>
+      <p class="pulse-note">One signature — any transaction counts — resets everything. Silence escalates: nag → guardians → care mode → claimable.</p>
+    </div>
+  </section>
+
+  <section id="problem">
+    <h2>Onchain assets have one silent failure mode</h2>
+    <p class="lede">The cause never matters — a forgotten seed phrase, a death, a stolen device, a deprecated AI agent, a founder who held the only key. The outcome is identical: the owner can no longer sign, and the money strands forever.</p>
+    <div class="stat-row">
+      <div class="stat"><b>20%+</b><span>of all Bitcoin estimated permanently lost to key loss</span></div>
+      <div class="stat"><b>$190M</b><span>locked at QuadrigaCX when its sole keyholder died</span></div>
+      <div class="stat"><b>₹ tens of thousands cr</b><span>sit unclaimed in Indian banks and insurers — money that never learned its owner was gone</span></div>
+    </div>
+  </section>
+
+  <section id="ladder">
+    <h2>The liveness ladder</h2>
+    <p class="lede">Any activity resets the clock. Silence escalates — slowly, loudly, and always reversibly by one signature from the owner.</p>
+    <div class="ladder">
+      <div class="rung reset"><span class="t">Any time</span><h3>Owner signs → everything resets</h3><p>Any transaction is a heartbeat. Travel, hospital, prison — declare a pause in advance and the clock waits.</p></div>
+      <div class="rung"><span class="t">3 months silent</span><h3>The nag</h3><p>Email and Telegram reminders. Most stories end here.</p></div>
+      <div class="rung"><span class="t">6 months</span><h3>Guardians alerted</h3><p>Your M-of-N circle is notified. They can propose rotating the vault to a new key — recovery for a forgotten seed — behind a 7-day timelock you can always veto.</p></div>
+      <div class="rung"><span class="t">9 months</span><h3>Care mode</h3><p>A designated guardian gets capped monthly spending for essentials — not the keys. Instantly revoked by any owner activity.</p></div>
+      <div class="rung"><span class="t">12 months</span><h3>The cascade</h3><p>Beneficiaries claim in your order: your own backup wallet first, then family, then a charity sink. Unclaimed tiers cascade — funds can never dead-end.</p></div>
+    </div>
+  </section>
+
+  <section id="covers">
+    <h2>One mechanism. Five endings rewritten.</h2>
+    <p class="lede">Recovery, inheritance, incapacity, continuity, and agent cleanup are the same contract seen from five directions.</p>
+    <div class="covers">
+      <div class="cover"><span class="t">Forgotten keys</span><h3>Social recovery</h3><p>Guardians rotate the vault to your new key. The lock changes — the house doesn't. No seed phrase required, ever again.</p></div>
+      <div class="cover"><span class="t">Death</span><h3>Inheritance without probate pain</h3><p>A non-crypto heir claims through an email link and receives dollars, not jargon. An encrypted note from you decrypts only on claim.</p></div>
+      <div class="cover"><span class="t">Decline</span><h3>Care, not surrender</h3><p>Bills get paid by someone you chose, within limits you set, while you keep the keys.</p></div>
+      <div class="cover"><span class="t">Founder risk</span><h3>Continuity for treasuries</h3><p>Org funds cascade to a co-founder multisig instead of dying with one person. The QuadrigaCX problem, closed.</p></div>
+      <div class="cover"><span class="t">AI agents</span><h3>The watchdog</h3><p>An agent stops heartbeating — deprecated, crashed, abandoned — and its treasury walks home to the operator.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="invariant">
+      <blockquote>"The lock changed.<br>The house didn't."</blockquote>
+      <p>Every configuration change — heirs, guardians, timings — takes a 7-day timelock with notification and owner veto. A thief with your key cannot silently redirect your safety net. Guardians can propose; only contracts move funds.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot-mark">Heirloom · built on Arc</div>
+    <div><span class="warn">Unaudited testnet software.</span> Do not use with real funds. · <a href="https://github.com/gnanam1990/heirloom">Source</a></div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  const tiers=[
+    {at:0,   label:"Active",          sub:"Owner activity detected. Clock reset.",         warn:false},
+    {at:25,  label:"Nagging",         sub:"3 months silent → reminders sent.",             warn:false},
+    {at:50,  label:"Guardians alerted",sub:"6 months → your circle is notified.",          warn:true},
+    {at:75,  label:"Care mode",       sub:"9 months → capped essentials spending only.",   warn:true},
+    {at:100, label:"Claimable",       sub:"12 months → cascade begins. Funds walk home.",  warn:true}
+  ];
+  const bar=document.getElementById('bar'), state=document.getElementById('state'),
+        sub=document.getElementById('sub'), btn=document.getElementById('beatBtn');
+  let p=0, timer=null;
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function render(){
+    bar.style.width=p+'%';
+    let cur=tiers[0];
+    for(const t of tiers){ if(p>=t.at) cur=t; }
+    state.textContent=cur.label;
+    state.className='pulse-state'+(cur.warn?' warn':'');
+    sub.textContent=cur.sub;
+  }
+  function tick(){ p=Math.min(100,p+0.5); render(); if(p>=100){clearInterval(timer);timer=null;} }
+  function start(){ if(!timer && !reduced) timer=setInterval(tick,120); }
+  btn.addEventListener('click',()=>{ p=0; render(); start(); });
+  render(); start();
+})();
+</script>
+</body>
+</html>

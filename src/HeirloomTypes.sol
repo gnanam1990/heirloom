@@ -78,6 +78,7 @@ library HeirloomTypes {
 
     error NotOwner();
     error NotGuardian();
+    error NotBeneficiary();
     error NotCareGuardian();
     error ZeroAddress();
     error LadderNotMonotonic();

@@ -23,7 +23,7 @@ contract GuardHarness is ConfigGuard {
         return owner;
     }
 
-    function _applyProposal(bytes32 kind, bytes memory data) internal override {
+    function _applyProposal(uint256, bytes32 kind, bytes memory data) internal override {
         if (kind == KIND_SET) {
             guardedValue = abi.decode(data, (uint256));
         }

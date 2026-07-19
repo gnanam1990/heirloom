@@ -41,7 +41,7 @@ abstract contract ConfigGuard {
 
     /// @notice Applies a matured proposal. Implemented by the vault; only ever
     ///         called from `execute`, past the delay, once.
-    function _applyProposal(bytes32 kind, bytes memory data) internal virtual;
+    function _applyProposal(uint256 id, bytes32 kind, bytes memory data) internal virtual;
 
     // ---------------------------------------------------------------------
     // Views
@@ -62,6 +62,9 @@ abstract contract ConfigGuard {
     function isRipe(uint256 id) public view returns (bool) {
         T.Proposal storage p = _proposals[id];
         if (p.eta == 0 || p.executed || p.vetoed) return false;
+        // Intentional: the guard's security comes from a 7-day delay, which no
+        // validator can meaningfully shorten by nudging a timestamp.
+        // forge-lint: disable-next-line(block-timestamp)
         return block.timestamp >= p.eta;
     }
 
@@ -98,13 +101,14 @@ abstract contract ConfigGuard {
 
         if (p.eta == 0) revert T.ProposalMissing(id);
         if (p.executed || p.vetoed) revert T.ProposalDead(id);
+        // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp < p.eta) revert T.ProposalNotRipe(id, p.eta, uint64(block.timestamp));
 
         // EFFECTS before INTERACTIONS.
         p.executed = true;
 
         bytes32 kind = p.kind;
-        _applyProposal(kind, p.data);
+        _applyProposal(id, kind, p.data);
 
         emit T.ProposalExecuted(id, kind);
     }
@@ -112,7 +116,7 @@ abstract contract ConfigGuard {
     /// @notice Cancels a pending proposal. The owner's escape hatch.
     /// @dev Available at ANY point before execution, including after the eta has
     ///      passed. Deliberately not restricted to the pre-eta window.
-    function veto(uint256 id) external {
+    function veto(uint256 id) public virtual {
         if (msg.sender != _configOwner()) revert T.NotOwner();
 
         T.Proposal storage p = _proposals[id];

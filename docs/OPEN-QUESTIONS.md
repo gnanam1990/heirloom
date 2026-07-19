@@ -99,6 +99,43 @@ the purity property is not accidentally broken later by adding it naively.
 
 ---
 
+## Q8 — 🟡 `Recovered` is a transition, not a resting state
+
+**Found:** PRD §5 lists `Recovered` as a state machine node, but §8 demo step 4
+requires that after rotation the vault is fully live under the new key — "same
+vault, new key, funds untouched". A vault parked permanently in `Recovered`
+could not escalate again, which would silently disable the safety net for the
+new owner: rotate once and the vault never protects you again.
+
+**Conservative reading taken:** `executeRotation` stamps `lastActivity = now`, so
+the vault returns to `Active` under the new key and the full ladder re-arms.
+`Recovered` is retained in the enum for PRD fidelity and emitted as an event
+(`OwnerRotated`) plus a `lastRotationAt` field, rather than being an absorbing
+state. `Claimed` IS absorbing — distributed funds cannot be un-distributed.
+
+**Question for owner:** confirm this reading. The alternative (a sticky
+`Recovered` state) means a recovered vault needs an explicit re-arm step.
+
+---
+
+## Q9 — 🟡 Does invariant 1's "ANY state" include the absorbing terminal?
+
+**Found:** Invariant 1 says an owner signature resets from **any** state. Taken
+literally that includes `Claimed` — but the funds are already gone by then, and
+"resetting" a claimed vault would imply clawing back a completed inheritance.
+
+**Conservative reading taken:** the ladder library satisfies invariant 1 with no
+exceptions — it is pure and always returns `Active` when `lastActivity == now`.
+At the vault level, `heartbeat()` is accepted and resets the clock from every
+rung including `Claimable` (the anti-false-death path the PRD cares about), but
+reverts once `Claimed`, because there is nothing left to protect and the alternative
+is a clawback path an heir cannot rely on. Tested explicitly both ways.
+
+**Question for owner:** confirm reverting on `Claimed` is right. Making it a
+silent no-op instead is the only other defensible option.
+
+---
+
 ## Q7 — 🟢 Arc timestamp equality
 
 **Found:** STEP 4.6 — Arc block timestamps are non-decreasing, not strictly

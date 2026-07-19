@@ -4,7 +4,6 @@ node_modules/
 out/
 cache/
 broadcast/
-lib/
 *.db
 dist/
 coverage/

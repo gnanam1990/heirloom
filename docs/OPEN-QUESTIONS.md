@@ -99,6 +99,24 @@ the purity property is not accidentally broken later by adding it naively.
 
 ---
 
+## Q10 — 🟢 `carePeriod` must be shorter than the care-mode span
+
+**Found:** while testing the care budget rollover. If `carePeriod` is longer than
+`claimableAfter - careModeAfter` (95 days at the defaults), the budget can never
+roll over — the vault cascades to `Claimable` before a second period begins. The
+production defaults (30-day period inside a 95-day window) are fine; the test
+fixture originally was not, which is how this surfaced.
+
+**Conservative reading taken:** NOT enforced onchain. A too-long care period is
+degenerate rather than dangerous — it means the guardian gets exactly one budget
+period, which fails safe (less spending, not more). Adding a constructor check
+would couple two independently-configurable values for no security gain.
+
+**Question for owner:** worth a deploy-time warning in the script? Currently
+silent.
+
+---
+
 ## Q8 — 🟡 `Recovered` is a transition, not a resting state
 
 **Found:** PRD §5 lists `Recovered` as a state machine node, but §8 demo step 4

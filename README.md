@@ -15,4 +15,65 @@ The core primitive is the **liveness ladder**: any activity resets the clock; si
 
 **Status:** early build · Arc testnet · unaudited — do not use with real funds.
 
+> ⚠️ **UNAUDITED TESTNET CODE.** Every contract in `src/` is labelled as such in
+> its NatSpec. Nothing here has been audited or externally reviewed. It is
+> intended for Arc **testnet** only. Do not send real funds to it.
+
+## Contracts
+
+| Contract | Role |
+|---|---|
+| [`LivenessLadder.sol`](src/LivenessLadder.sol) | Pure library: silence → rung. No storage, no keeper. |
+| [`ConfigGuard.sol`](src/ConfigGuard.sol) | `propose → 7-day timelock → execute`, owner-vetoable. No direct setters. |
+| [`RecoveryModule.sol`](src/RecoveryModule.sol) | M-of-N guardian key rotation. Guardians cannot move funds. |
+| [`ClaimsModule.sol`](src/ClaimsModule.sol) | Ordered heirs, claim windows, cascade, terminal charity sink. |
+| [`HeirloomVault.sol`](src/HeirloomVault.sol) | Holds USDC; wires the above; care mode. |
+
+### The six invariants, and where they are pinned
+
+| # | Invariant | Tests |
+|---|---|---|
+| 1 | Any owner signature resets the ladder to Active from any state | `LivenessLadder.t.sol`, `Vault.t.sol` |
+| 2 | Every config mutation is proposed, delayed 7 days, and vetoable. No direct setters | `ConfigGuard.t.sol` |
+| 3 | Guardians can only propose key rotation — never move funds | `Recovery.t.sol` |
+| 4 | Claims pay only pre-registered payees; no free-text destinations | `Claims.t.sol` |
+| 5 | Care mode is amount- and category-capped, revoked instantly by owner activity | `Vault.t.sol` |
+| 6 | Funds never dead-end: tiers cascade, the terminal tier never expires | `Claims.t.sol` |
+
+## Build
+
+Dependencies are git submodules, so clone recursively:
+
+```
+git clone --recurse-submodules https://github.com/gnanam1990/heirloom.git
+cd heirloom
+forge build
+forge test
+```
+
+If you already cloned without submodules: `forge install`
+
+## Deploy (Arc testnet)
+
+Arc testnet is chain id **5042002**, RPC `https://rpc.testnet.arc.network`.
+
+```
+cp .env.example .env
+```
+
+Fill in `.env`, then:
+
+```
+forge script script/DeployHeirloom.s.sol:DeployHeirloom --rpc-url "$ARC_TESTNET_RPC_URL" --broadcast
+```
+
+The deployer key is read from `PRIVATE_KEY` in the environment and is never
+written to disk or logged. `.env` is gitignored — use testnet keys only.
+
+The script pre-flights before spending gas: it reads `decimals()` off the
+configured USDC and aborts unless it is **6**, rejects any zero-address payee
+(Arc reverts on transfers to zero), and rejects an unreachable guardian
+threshold.
+
 Source of truth: [`docs/PRD.md`](docs/PRD.md). Build prompt: [`PROMPT.md`](PROMPT.md).
+Ambiguities and the conservative readings taken: [`docs/OPEN-QUESTIONS.md`](docs/OPEN-QUESTIONS.md).

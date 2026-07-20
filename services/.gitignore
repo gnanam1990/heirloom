@@ -5,3 +5,8 @@ node_modules/
 dist/
 heirloom-index.json
 heirloom-index.json.tmp
+
+# Circle entity-secret recovery files. These reconstruct the entity secret and
+# are as sensitive as the secret itself -- never commit one.
+recovery_file_*.dat
+*.dat

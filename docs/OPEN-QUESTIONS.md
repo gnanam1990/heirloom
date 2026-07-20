@@ -3,7 +3,7 @@
 Ambiguities found while building. Per the standing rule: **implement the most
 conservative reading, record the question here, do not guess expansively.**
 
-Status legend: 🔴 blocking · 🟡 answer changes design · 🟢 logged, conservative default fine
+Status legend: 🔴 blocking · 🟡 answer changes design · 🟢 logged, conservative default fine · ✅ resolved
 
 ---
 
@@ -40,23 +40,47 @@ development, or is this a spike that should stay labelled as not-in-development?
 
 ---
 
-## Q3 — 🔴 Care mode category enforcement is undefined onchain
+## Q3 — ✅ RESOLVED — care-mode categories are enforced by destination
 
-**Found:** PRD §4 SHOULD-6, §6 "Guardian collusion during care mode", and the
-PRD's own §9.3. The PRD requires care mode be "category-limited (bills/medical)"
-but never says how a category is proven onchain. A `categoryId` passed by the
-spending guardian is self-asserted — a colluding guardian simply labels a
-personal withdrawal as `MEDICAL`. The amount cap is the only enforceable limit.
+**Was:** PRD §4 SHOULD-6, §6 "Guardian collusion during care mode", and the PRD's
+own §9.3 required care mode be "category-limited (bills/medical)" but never said
+how a category is proven onchain. A `categoryId` passed by the spending guardian
+was self-asserted — a colluding guardian could label a personal withdrawal as
+`MEDICAL` and send it anywhere. The amount caps were the only real constraint.
 
-**Conservative reading taken (pending answer):** implement `categoryId` as a
-*recorded, evented, owner-configurable allowlist* — the cap is what constrains
-value, the category is an auditable label, and this is documented honestly in
-NatSpec rather than overclaimed as enforcement. Per-category sub-caps are
-enforced so the label at least bounds spend per bucket.
+**Resolved by binding categories to destinations rather than to labels.** Each
+category now carries an owner-approved payee allowlist:
 
-**Question for owner:** does v1 need a payee allowlist (guardian may only send to
-pre-registered merchant addresses) to make the category claim real? That is the
-only way to enforce it without an off-chain policy oracle.
+- `careSpend(payee, category, amount)` reverts `NotAllowedPayee(category, payee)`
+  unless `payee` is registered under that exact category. The check runs before
+  any budget is touched, so a rejected attempt cannot consume a cap.
+- The allowlist is set by the OWNER only, and every change routes through the
+  same `propose → 7-day timelock → execute` path as all other config, owner-
+  vetoable throughout (`proposeCarePayees`). There is no direct setter; the suite
+  probes for four plausible ones and asserts each is unreachable. A thief holding
+  the owner key therefore cannot quietly register their own address — this keeps
+  invariant 2 covering the new surface.
+- Replacement is wholesale rather than add/remove, so the state after execution
+  is a pure function of the proposal payload: what the owner saw in the
+  notification a week earlier is exactly what lands.
+- Dropping a category clears its destinations too, so a category that returns
+  later cannot silently resurrect the payees it had in a previous life.
+- Both amount caps (global and per-category) still apply on top. All three layers
+  must pass: category exists, destination approved under *that* category, caps
+  hold.
+
+**What this does and does not buy.** A colluding guardian can no longer route
+funds to themselves or to an address the owner never vetted — the realistic
+collusion path is closed. What remains is that an *approved* merchant could
+over-bill within the caps, or the owner could approve a bad address in the first
+place. Both are bounded by the caps and visible in the event trail, and neither
+is fixable onchain without an oracle. That residual is honest and documented,
+rather than papered over.
+
+**Tests:** `test/CareAllowlist.t.sol` — 15 tests including the guardian-pays-self
+scenario, cross-category leakage, the full timelock path, the thief-adds-own-
+address attack, and a fuzz asserting no `(category, payee)` pair outside the
+allowlist can move a single unit at any amount (5,000 runs clean).
 
 ---
 

@@ -95,6 +95,11 @@ library HeirloomTypes {
     error NothingToClaim();
     error CapExceeded(uint256 requested, uint256 remaining);
     error CategoryNotAllowed(bytes32 category);
+    /// @dev Care mode may only pay addresses the OWNER pre-approved for that
+    ///      specific category. This is what makes a category a real constraint
+    ///      rather than a self-asserted label — see docs/OPEN-QUESTIONS.md Q3.
+    error NotAllowedPayee(bytes32 category, address payee);
+    error PayeeListEmpty(bytes32 category);
 
     // ---------------------------------------------------------------------
     // Events — PRD §5 requires a full trail; off-chain services observe only.
@@ -113,4 +118,7 @@ library HeirloomTypes {
         address indexed guardian, address indexed payee, bytes32 indexed category, uint256 amount
     );
     event CareModeRevoked(uint64 at);
+    /// @notice The approved destinations for one care category were replaced.
+    ///         Emitted only from a matured, un-vetoed proposal.
+    event CarePayeesSet(bytes32 indexed category, address[] payees);
 }

@@ -7,7 +7,7 @@ Money today assumes its owner is alive, present, and remembers everything. Heirl
 One mechanism, five problems solved:
 - **Forgot your seed phrase** → M-of-N guardian social recovery rotates the vault to a new key. The lock changes, not the house.
 - **Death** → cascading beneficiaries claim in order; a non-crypto heir claims via an email link, never sees a seed phrase.
-- **Incapacity** → care mode gives a guardian capped, category-limited spending — not the keys.
+- **Incapacity** → care mode lets a guardian pay *pre-approved addresses only*, within caps — not the keys.
 - **Founder-key risk** → org treasuries cascade to a co-founder multisig instead of dying (the QuadrigaCX problem).
 - **Dead AI agents** → agent-treasury watchdog returns funds to the operator.
 
@@ -27,7 +27,7 @@ The core primitive is the **liveness ladder**: any activity resets the clock; si
 | [`ConfigGuard.sol`](src/ConfigGuard.sol) | `propose → 7-day timelock → execute`, owner-vetoable. No direct setters. |
 | [`RecoveryModule.sol`](src/RecoveryModule.sol) | M-of-N guardian key rotation. Guardians cannot move funds. |
 | [`ClaimsModule.sol`](src/ClaimsModule.sol) | Ordered heirs, claim windows, cascade, terminal charity sink. |
-| [`HeirloomVault.sol`](src/HeirloomVault.sol) | Holds USDC; wires the above; care mode. |
+| [`HeirloomVault.sol`](src/HeirloomVault.sol) | Holds USDC; wires the above; care mode with per-category payee allowlists. |
 
 ### The six invariants, and where they are pinned
 
@@ -37,7 +37,7 @@ The core primitive is the **liveness ladder**: any activity resets the clock; si
 | 2 | Every config mutation is proposed, delayed 7 days, and vetoable. No direct setters | `ConfigGuard.t.sol` |
 | 3 | Guardians can only propose key rotation — never move funds | `Recovery.t.sol` |
 | 4 | Claims pay only pre-registered payees; no free-text destinations | `Claims.t.sol` |
-| 5 | Care mode is amount- and category-capped, revoked instantly by owner activity | `Vault.t.sol` |
+| 5 | Care mode is destination-enforced and amount-capped, revoked instantly by owner activity | `Vault.t.sol`, `CareAllowlist.t.sol` |
 | 6 | Funds never dead-end: tiers cascade, the terminal tier never expires | `Claims.t.sol` |
 
 ## Build

@@ -68,6 +68,12 @@ contract DeployHeirloom is Script {
         caps[0] = uint128(vm.envUint("HEIRLOOM_CARE_BILLS_CAP")); // 6dp
         caps[1] = uint128(vm.envUint("HEIRLOOM_CARE_MEDICAL_CAP")); // 6dp
 
+        // Approved destinations per category. A care payment can only reach one
+        // of these; the label alone proves nothing (docs/OPEN-QUESTIONS.md Q3).
+        address[][] memory payees = new address[][](2);
+        payees[0] = vm.envAddress("HEIRLOOM_CARE_BILLS_PAYEES", ",");
+        payees[1] = vm.envAddress("HEIRLOOM_CARE_MEDICAL_PAYEES", ",");
+
         p = HeirloomVault.InitParams({
             owner: vm.envAddress("HEIRLOOM_OWNER"),
             asset: vm.envAddress("HEIRLOOM_USDC"),
@@ -79,7 +85,8 @@ contract DeployHeirloom is Script {
             careMonthlyCap: uint128(vm.envUint("HEIRLOOM_CARE_MONTHLY_CAP")), // 6dp
             carePeriod: 30 days,
             careCategories: categories,
-            careCategoryCaps: caps
+            careCategoryCaps: caps,
+            careCategoryPayees: payees
         });
     }
 
@@ -99,6 +106,15 @@ contract DeployHeirloom is Script {
             require(p.beneficiaries[i].payee != address(0), "a heir address is zero");
         }
         require(p.careGuardian != address(0), "care guardian is zero");
+
+        // A category that can pay nobody is a dead end for the care guardian;
+        // a zero destination would revert on Arc at payout time.
+        for (uint256 c = 0; c < p.careCategoryPayees.length; c++) {
+            require(p.careCategoryPayees[c].length > 0, "a care category has no approved payees");
+            for (uint256 j = 0; j < p.careCategoryPayees[c].length; j++) {
+                require(p.careCategoryPayees[c][j] != address(0), "a care payee is zero");
+            }
+        }
 
         require(p.threshold > 0 && p.threshold <= p.guardians.length, "guardian threshold unreachable");
     }

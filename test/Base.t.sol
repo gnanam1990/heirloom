@@ -27,7 +27,12 @@ abstract contract Base is Test {
     address internal charity = makeAddr("charity"); // tier 2 — terminal sink
 
     address internal careGuardian = makeAddr("careGuardian");
-    address internal utilityCo = makeAddr("utilityCo");
+
+    // Owner-approved care destinations. A category is only meaningful because
+    // these addresses are registered under it (docs/OPEN-QUESTIONS.md Q3).
+    address internal utilityCo = makeAddr("utilityCo"); // BILLS + MEDICAL
+    address internal waterBoard = makeAddr("waterBoard"); // BILLS
+    address internal hospital = makeAddr("hospital"); // MEDICAL
 
     // Seconds-scale mirror of the 90/180/270/365-day production ladder.
     uint32 internal constant NAG = 90;
@@ -87,6 +92,17 @@ abstract contract Base is Test {
         caps[0] = CARE_BILLS_CAP;
         caps[1] = CARE_MEDICAL_CAP;
 
+        // Index-aligned with `cats`. utilityCo appears under both categories on
+        // purpose — a real payee can legitimately serve two buckets, and the
+        // tests lean on that to prove the categories still do not leak.
+        address[][] memory payees = new address[][](2);
+        payees[0] = new address[](2);
+        payees[0][0] = utilityCo;
+        payees[0][1] = waterBoard;
+        payees[1] = new address[](2);
+        payees[1][0] = utilityCo;
+        payees[1][1] = hospital;
+
         p = HeirloomVault.InitParams({
             owner: owner,
             asset: address(usdc),
@@ -100,7 +116,8 @@ abstract contract Base is Test {
             careMonthlyCap: CARE_MONTHLY_CAP,
             carePeriod: CARE_PERIOD,
             careCategories: cats,
-            careCategoryCaps: caps
+            careCategoryCaps: caps,
+            careCategoryPayees: payees
         });
     }
 

@@ -45,6 +45,10 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
     /// @param carePeriod       Length of a care budgeting period, in seconds.
     /// @param careCategories   Allowlisted spend categories.
     /// @param careCategoryCaps Per-category ceiling, index-aligned with the above.
+    /// @param careCategoryPayees Approved destinations per category, index-aligned
+    ///        with `careCategories`. A care payment can only ever reach one of
+    ///        these addresses — this is what makes a category enforceable rather
+    ///        than a label the guardian asserts (docs/OPEN-QUESTIONS.md Q3).
     struct InitParams {
         address owner;
         address asset;
@@ -57,10 +61,12 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         uint32 carePeriod;
         bytes32[] careCategories;
         uint128[] careCategoryCaps;
+        address[][] careCategoryPayees;
     }
 
     bytes32 internal constant KIND_LADDER = keccak256("SET_LADDER");
     bytes32 internal constant KIND_CARE = keccak256("SET_CARE_CONFIG");
+    bytes32 internal constant KIND_CARE_PAYEES = keccak256("SET_CARE_PAYEES");
 
     IERC20 public immutable asset;
 
@@ -91,6 +97,11 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
     mapping(bytes32 => uint128) internal _careCategorySpent;
     mapping(bytes32 => uint64) internal _careCategoryEpoch;
 
+    /// @notice Owner-approved destinations, per category. Care mode can pay these
+    ///         addresses and nobody else.
+    mapping(bytes32 => mapping(address => bool)) public isApprovedCarePayee;
+    mapping(bytes32 => address[]) internal _carePayees;
+
     modifier onlyOwner() {
         if (msg.sender != owner) revert T.NotOwner();
         _;
@@ -110,6 +121,15 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         _setGuardians(p.guardians, p.threshold);
         _setBeneficiaries(p.beneficiaries);
         _setCareConfig(p.careGuardian, p.careMonthlyCap, p.carePeriod, p.careCategories, p.careCategoryCaps);
+
+        // Seed the destination allowlists. Deployment is owner-controlled config
+        // time, so this needs no timelock; every later change does.
+        if (p.careCategoryPayees.length != p.careCategories.length) {
+            revert T.CategoryNotAllowed(bytes32(0));
+        }
+        for (uint256 i = 0; i < p.careCategories.length; i++) {
+            _setCarePayees(p.careCategories[i], p.careCategoryPayees[i]);
+        }
 
         lastActivity = uint64(block.timestamp);
     }
@@ -238,10 +258,17 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
     ///      vault in CareMode forever and block the cascade to the heirs
     ///      (docs/OPEN-QUESTIONS.md Q4).
     ///
-    ///      Honest limitation: `category` is owner-allowlisted and auditable, but
-    ///      it is asserted by the guardian, not proven. The AMOUNT caps — global
-    ///      and per-category — are what actually bound a colluding guardian. See
-    ///      docs/OPEN-QUESTIONS.md Q3.
+    ///      Categories are enforced by DESTINATION, not by the label the guardian
+    ///      passes (docs/OPEN-QUESTIONS.md Q3, resolved). `category` selects an
+    ///      owner-approved payee list, and the payment must land on one of those
+    ///      addresses — so a colluding guardian cannot relabel a personal
+    ///      withdrawal as MEDICAL and send it to themselves. Three layers apply,
+    ///      all of them: the category must exist, the destination must be
+    ///      approved under THAT category, and both amount caps must hold.
+    ///
+    ///      The allowlist is mutable only through the 7-day config timelock, so a
+    ///      thief holding the owner key cannot quietly register their own address
+    ///      as an approved destination (invariant 2).
     function careSpend(address payee, bytes32 category, uint256 amount) external nonReentrant {
         if (msg.sender != careGuardian) revert T.NotCareGuardian();
         if (payee == address(0)) revert T.ZeroAddress();
@@ -250,6 +277,10 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         if (s != T.VaultState.CareMode) revert T.WrongState(s, T.VaultState.CareMode);
 
         if (!careCategoryAllowed[category]) revert T.CategoryNotAllowed(category);
+
+        // The destination check — what makes the category real. Rejected before
+        // any budget is touched, so an unapproved attempt cannot consume a cap.
+        if (!isApprovedCarePayee[category][payee]) revert T.NotAllowedPayee(category, payee);
 
         _rollCarePeriodIfDue();
 
@@ -339,6 +370,20 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         _touch();
     }
 
+    /// @notice Queues a replacement destination list for one care category.
+    /// @dev Wholesale replacement rather than add/remove: it makes the resulting
+    ///      state a pure function of the proposal payload, so what the owner sees
+    ///      in the notification is exactly what executes a week later.
+    function proposeCarePayees(bytes32 category, address[] calldata payees)
+        external
+        onlyOwner
+        returns (uint256 id)
+    {
+        _validateCarePayees(category, payees); // fail fast rather than after a week
+        id = _queue(KIND_CARE_PAYEES, abi.encode(category, payees), msg.sender);
+        _touch();
+    }
+
     /// @notice Veto, plus the liveness signal that vetoing obviously implies.
     function veto(uint256 id) public override {
         super.veto(id);
@@ -366,6 +411,9 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
                 uint128[] memory caps
             ) = abi.decode(data, (address, uint128, uint32, bytes32[], uint128[]));
             _setCareConfig(guardian, monthlyCap, period, categories, caps);
+        } else if (kind == KIND_CARE_PAYEES) {
+            (bytes32 category, address[] memory payees) = abi.decode(data, (bytes32, address[]));
+            _setCarePayees(category, payees);
         }
     }
 
@@ -381,9 +429,13 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         }
 
         // Clear the previous allowlist so a removed category cannot be spent on.
+        // The destination list goes with it: a category that comes back later
+        // must not silently resurrect the payees it had in a previous life.
         for (uint256 i = 0; i < _careCategories.length; i++) {
-            careCategoryAllowed[_careCategories[i]] = false;
-            careCategoryCap[_careCategories[i]] = 0;
+            bytes32 old = _careCategories[i];
+            careCategoryAllowed[old] = false;
+            careCategoryCap[old] = 0;
+            _clearCarePayees(old);
         }
         delete _careCategories;
 
@@ -400,6 +452,48 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         // Any change to the care rules starts a clean period.
         _resetCareBudget();
         _careBudget.cap = monthlyCap;
+    }
+
+    /// @notice Replaces the approved destinations for one category.
+    /// @dev Internal — reachable only from the constructor (owner-controlled
+    ///      deploy) and from `_applyProposal`, past the 7-day delay. There is no
+    ///      direct setter, and the test suite probes for one.
+    function _setCarePayees(bytes32 category, address[] memory payees) internal {
+        _validateCarePayees(category, payees);
+
+        _clearCarePayees(category);
+
+        for (uint256 i = 0; i < payees.length; i++) {
+            // Skip duplicates so the stored array mirrors the effective set.
+            if (isApprovedCarePayee[category][payees[i]]) continue;
+            isApprovedCarePayee[category][payees[i]] = true;
+            _carePayees[category].push(payees[i]);
+        }
+
+        emit T.CarePayeesSet(category, payees);
+    }
+
+    function _clearCarePayees(bytes32 category) internal {
+        address[] storage list = _carePayees[category];
+        for (uint256 i = 0; i < list.length; i++) {
+            isApprovedCarePayee[category][list[i]] = false;
+        }
+        delete _carePayees[category];
+    }
+
+    /// @dev An empty list would leave a category that exists but can pay nobody —
+    ///      a silent dead end for the care guardian. A zero payee is fatal because
+    ///      Arc reverts on transfers to the zero address.
+    function _validateCarePayees(bytes32 category, address[] memory payees) internal pure {
+        if (payees.length == 0) revert T.PayeeListEmpty(category);
+        for (uint256 i = 0; i < payees.length; i++) {
+            if (payees[i] == address(0)) revert T.ZeroAddress();
+        }
+    }
+
+    /// @notice The approved destinations for a category, in registration order.
+    function carePayees(bytes32 category) external view returns (address[] memory) {
+        return _carePayees[category];
     }
 
     // =====================================================================

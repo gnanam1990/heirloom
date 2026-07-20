@@ -253,15 +253,25 @@
         <div class="act" id="actCare">
           <h3>Step 3 · Care mode</h3>
           <div class="why" id="careWhy">Unlocks at 9 months (270 days)</div>
-          <p>A guardian you chose can pay essentials — capped, and only in allowed categories. Not the keys.</p>
+          <p>A guardian you chose can pay essentials — capped, and only to addresses <em>you</em> approved for that category. Not the keys.</p>
           <div class="kv"><span>Period cap</span><b>500.000000 USDC</b></div>
           <div class="kv"><span>BILLS category cap</span><b>300.000000 USDC</b></div>
           <div class="kv" id="careSpentKv"><span>Spent this period</span><b>0.000000 USDC</b></div>
+
+          <label class="fld" for="carePayee">Destination — owner-approved addresses only</label>
+          <select id="carePayee">
+            <option value="utility">✓ State Electricity Board — approved for BILLS</option>
+            <option value="water">✓ Water Utility — approved for BILLS</option>
+            <option value="hospital">✓ City Hospital — approved for MEDICAL</option>
+            <option value="guardianSelf">✗ The guardian’s own wallet — never approved</option>
+          </select>
+
           <div class="ctrl-row">
-            <button class="btn" id="btnBill" type="button" disabled>Pay electricity — 120.000000</button>
-            <button class="btn danger" id="btnLux" type="button" disabled>Try LUXURY — 120.000000</button>
+            <button class="btn" id="btnBill" type="button" disabled>Pay as BILLS — 120.000000</button>
+            <button class="btn danger" id="btnLux" type="button" disabled>Try label LUXURY — 120.000000</button>
           </div>
-          <p class="cite">Mirrors <b>HeirloomVault.sol:245–273</b> — category allowlist, then global cap, then per-category cap. Guardian spending does <em>not</em> reset the ladder (Q4).</p>
+          <p style="font-size:.82rem;margin-top:10px">Pick the guardian’s own wallet and try to pay: the label does not matter, because the <em>destination</em> is what the contract checks.</p>
+          <p class="cite">Mirrors <b>HeirloomVault.sol:careSpend</b> — category exists, then <b>isApprovedCarePayee[category][payee]</b>, then global cap, then per-category cap. The allowlist is owner-set through the 7-day timelock (<b>proposeCarePayees</b>), so a stolen key cannot add its own address. Resolves OPEN-QUESTIONS Q3. Guardian spending does <em>not</em> reset the ladder (Q4).</p>
         </div>
 
         <!-- RECOVERY -->
@@ -356,6 +366,16 @@ var TIMELOCK_DAYS = 7;
 var WINDOWS = [30, 60, 0];
 
 /* Care config — .env.example defaults, 6dp. */
+/* Owner-approved destinations per category — the Q3 fix. Care mode can pay
+   these addresses and nobody else; the guardian-supplied label proves nothing
+   on its own. Mirrors isApprovedCarePayee[category][payee] in HeirloomVault. */
+var CARE_PAYEES = {
+  utility:      {label:'State Electricity Board', addr:'0x71…UTIL',  cats:['BILLS']},
+  water:        {label:'Water Utility',           addr:'0x72…WATER', cats:['BILLS']},
+  hospital:     {label:'City Hospital',           addr:'0x73…HOSP',  cats:['MEDICAL']},
+  guardianSelf: {label:'Guardian’s own wallet',   addr:'0x99…GUARD', cats:[]}
+};
+
 var CARE_PERIOD_CAP = 500000000;   // 500.000000
 var CARE_BILLS_CAP  = 300000000;   // 300.000000
 var BILL_AMOUNT     = 120000000;   // 120.000000
@@ -468,13 +488,21 @@ function logRev(msg){ logIt(msg, 'rev'); }
    =================================================================== */
 
 /* careSpend — src/HeirloomVault.sol:245-278 */
-function careSpend(category, amount){
+function careSpend(category, amount, payeeKey){
   var s = vaultState();
   if (s !== 'CareMode'){                                          // :250-251
     logRev('careSpend reverted WrongState('+s+', CareMode)'); return;
   }
   if (category !== 'BILLS' && category !== 'MEDICAL'){            // :252
     logRev('careSpend reverted CategoryNotAllowed('+category+') — not on the owner’s allowlist');
+    return;
+  }
+  /* The destination check — what makes the category real (Q3). Runs BEFORE any
+     budget is touched, so a rejected attempt cannot consume a cap. */
+  var dest = CARE_PAYEES[payeeKey];
+  if (!dest || dest.cats.indexOf(category) === -1){
+    logRev('careSpend reverted NotAllowedPayee('+category+', '+(dest?dest.addr:'0x0')+
+           ') — '+(dest?dest.label:'unknown')+' is not approved for '+category);
     return;
   }
   var globalRemaining = CARE_PERIOD_CAP - v.careSpent;            // :257
@@ -489,7 +517,7 @@ function careSpend(category, amount){
   }
   v.careSpent += amount; v.careBillsSpent += amount;              // :266-270
   v.balance   -= amount;
-  logIt('CareSpend(careGuardian, utilityCo, '+category+', '+usd(amount)+')');
+  logIt('CareSpend(careGuardian, '+dest.addr+' ['+dest.label+'], '+category+', '+usd(amount)+')');
   // NOTE: no touch() here — this is a GUARDIAN acting, not the owner.
   // If it reset the ladder a guardian could hold the vault in CareMode
   // forever and block the cascade. See docs/OPEN-QUESTIONS.md Q4.
@@ -636,6 +664,7 @@ function render(){
   el('actCare').className = 'act' + (inCare ? '' : ' locked');
   el('btnBill').disabled = !inCare;
   el('btnLux').disabled  = !inCare;
+  el('carePayee').disabled = !inCare;
   el('careWhy').textContent = inCare
     ? 'Active — guardian may spend within caps'
     : 'Unlocks at 9 months (270 days) · currently ' + s;
@@ -796,8 +825,8 @@ el('famName').addEventListener('input', function(){
   render();
 });
 
-el('btnBill').addEventListener('click', act(function(){ careSpend('BILLS', BILL_AMOUNT); }));
-el('btnLux').addEventListener('click',  act(function(){ careSpend('LUXURY', BILL_AMOUNT); }));
+el('btnBill').addEventListener('click', act(function(){ careSpend('BILLS', BILL_AMOUNT, el('carePayee').value); }));
+el('btnLux').addEventListener('click',  act(function(){ careSpend('LUXURY', BILL_AMOUNT, el('carePayee').value); }));
 
 el('btnPropRot').addEventListener('click', act(proposeRotation));
 el('btnAppr').addEventListener('click', act(approveRotation));

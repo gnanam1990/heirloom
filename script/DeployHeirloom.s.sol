@@ -55,8 +55,14 @@ contract DeployHeirloom is Script {
     function _config() internal view returns (HeirloomVault.InitParams memory p) {
         // Ordered heirs: own cold backup -> spouse/family -> charity terminal.
         T.Beneficiary[] memory heirs = new T.Beneficiary[](3);
-        heirs[0] = T.Beneficiary({payee: vm.envAddress("HEIRLOOM_HEIR_COLD_BACKUP"), window: 30 days});
-        heirs[1] = T.Beneficiary({payee: vm.envAddress("HEIRLOOM_HEIR_FAMILY"), window: 60 days});
+        heirs[0] = T.Beneficiary({
+            payee: vm.envAddress("HEIRLOOM_HEIR_COLD_BACKUP"),
+            window: uint32(vm.envOr("HEIRLOOM_WINDOW_TIER0", uint256(30 days)))
+        });
+        heirs[1] = T.Beneficiary({
+            payee: vm.envAddress("HEIRLOOM_HEIR_FAMILY"),
+            window: uint32(vm.envOr("HEIRLOOM_WINDOW_TIER1", uint256(60 days)))
+        });
         // Terminal tier: the window is ignored, it never expires (invariant 6).
         heirs[2] = T.Beneficiary({payee: vm.envAddress("HEIRLOOM_HEIR_CHARITY"), window: 0});
 
@@ -83,7 +89,7 @@ contract DeployHeirloom is Script {
             beneficiaries: heirs,
             careGuardian: vm.envAddress("HEIRLOOM_CARE_GUARDIAN"),
             careMonthlyCap: uint128(vm.envUint("HEIRLOOM_CARE_MONTHLY_CAP")), // 6dp
-            carePeriod: 30 days,
+            carePeriod: uint32(vm.envOr("HEIRLOOM_CARE_PERIOD", uint256(30 days))),
             careCategories: categories,
             careCategoryCaps: caps,
             careCategoryPayees: payees
@@ -129,6 +135,12 @@ contract DeployHeirloom is Script {
         console2.log("threshold:  ", p.threshold);
         console2.log("timelock(s):", vault.TIMELOCK());
         console2.log("state:      ", uint256(vault.state()), "(0 = Active)");
+        console2.log("ladder nag/alert/care/claimable (s):");
+        console2.log("  ", p.ladder.nagAfter, p.ladder.guardianAlertAfter);
+        console2.log("  ", p.ladder.careModeAfter, p.ladder.claimableAfter);
+        if (p.ladder.claimableAfter < 365 days) {
+            console2.log("*** DEMO-ONLY VAULT: short ladder durations. Not a real safety net. ***");
+        }
         console2.log("Do NOT send real funds to this contract.");
     }
 }

@@ -25,61 +25,92 @@ page and then **confirmed on-chain** before deploying: it has bytecode,
 `HeirloomVault` is the only deployed artifact. `ConfigGuard`, `RecoveryModule`
 and `ClaimsModule` are abstract contracts inherited by the vault, and
 `LivenessLadder` is an internal library inlined at compile time — none of them
-has its own address by design. Keeping the funds and the state machine in one
-contract is what lets the vault use plain checks-effects-interactions instead of
-cross-contract authorisation.
+has its own address by design.
+
+> **Redeployed 20 July 2026** for the permissionless assisted claim (Q11).
+> `claim()` is now callable by anyone, with funds still going only to the
+> pre-registered beneficiary. The previous pair is listed under *Superseded*
+> below and should not be used.
 
 ### 1. Production vault — real ladder
 
 | Field | Value |
 |---|---|
-| Address | [`0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8`](https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8) |
-| Deploy tx | [`0xf451efe7…cfb46cc`](https://testnet.arcscan.app/tx/0xf451efe7d78a734158f76e771d524145144602f4353b8e92f1d402a1ccfb46cc) |
-| Block | `52719229` |
-| Gas used | `4,230,397` |
+| Address | [`0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA`](https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA) |
+| Deploy tx | [`0x202157ab…0bea6db5`](https://testnet.arcscan.app/tx/0x202157abe3254caeaac25ef369a340f86b25d5b7c3d2e1ec3415b2fc0bea6db5) |
+| Block | `52730264` |
+| Gas used | `4,238,770` |
 | Source verified | ✅ on testnet.arcscan.app |
-| Ladder | 90 / 180 / 270 / 365 days (`7776000` / `15552000` / `23328000` / `31536000` s) |
+| Ladder | 90 / 180 / 270 / 365 days |
 | Config timelock | `604800` s (7 days) |
 | Guardians | 3, threshold 2-of-3 |
 
 ### 2. Demo vault — **DEMO-ONLY, short durations**
 
-> **This vault is not a safety net.** Its tiers are seconds, not months, so the
-> full cascade can be demonstrated on-chain without waiting a year. Anyone can
-> walk it to `Claimable` in four minutes and take the funds. It exists purely as
-> a live proof of the state machine.
+> **Not a safety net.** Tiers are seconds, not months. Anyone can walk it to
+> `Claimable` in four minutes and trigger the payout. It exists purely as a live
+> proof of the state machine.
 
 | Field | Value |
 |---|---|
-| Address | [`0x12dbb68F3c68BD47BF9799db7112f03ac37f6042`](https://testnet.arcscan.app/address/0x12dbb68F3c68BD47BF9799db7112f03ac37f6042) |
-| Deploy tx | [`0xa8849b57…be3569f`](https://testnet.arcscan.app/tx/0xa8849b576e9b5365acb07b33075460a8cb5712bf6d510be51af9c6fa1be3569f) |
-| Block | `52719574` |
-| Gas used | `4,230,277` |
+| Address | [`0x0D884E62B1dE894df1651910849E534aDf4deaDa`](https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa) |
+| Deploy tx | [`0xf25d5bbc…64cbd113`](https://testnet.arcscan.app/tx/0xf25d5bbcdd4ff18f0f99936305cfabf385a958cc886622a5f480b8da64cbd113) |
+| Block | `52730325` |
+| Gas used | `4,238,650` |
 | Source verified | ✅ on testnet.arcscan.app |
 | Ladder | **60 / 120 / 180 / 240 seconds** |
-| Claim windows | tier 0: 180 s · tier 1: 120 s · tier 2: terminal, never expires |
-| Care period | 120 s |
+| Claim windows | tier 0: 180 s · tier 1: 120 s · tier 2: terminal |
 
-### Abandoned deploy — do not use
+### Superseded — pre-Q11, do not use
 
-| Field | Value |
-|---|---|
-| Address | [`0x929e841ee1a443bef332ca51ac9e7954c935cc48`](https://testnet.arcscan.app/address/0x929e841ee1a443bef332ca51ac9e7954c935cc48) |
-| Deploy tx | [`0x096daec1…a550017`](https://testnet.arcscan.app/tx/0x096daec11249942f47ad0ac53ce1d5e1d3076e24020b73f081eea0579a550017) |
-| Block | `52719368` |
-| Why abandoned | Intended as the demo vault, but deployed with **production** ladder durations. An earlier edit to `_defaultLadder()` had silently no-op'd — `forge fmt` had reflowed the target onto one line, so the string replacement matched nothing and the env overrides were never wired in. Caught by reading the ladder back off-chain rather than trusting the deploy log. Cost ~0.088 USDC in gas. Left on-chain and recorded here rather than quietly ignored. |
+These enforced the old rule that only the registered beneficiary could call
+`claim()`. Left on-chain and recorded rather than quietly dropped.
+
+| Role | Address | Retired because |
+|---|---|---|
+| Production | [`0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8`](https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8) | superseded by Q11 redeploy |
+| Demo | [`0x12dbb68F3c68BD47BF9799db7112f03ac37f6042`](https://testnet.arcscan.app/address/0x12dbb68F3c68BD47BF9799db7112f03ac37f6042) | superseded by Q11 redeploy |
+| Abandoned | [`0x929e841ee1a443bef332ca51ac9e7954c935cc48`](https://testnet.arcscan.app/address/0x929e841ee1a443bef332ca51ac9e7954c935cc48) | deployed with production durations by mistake; an edit to `_defaultLadder()` had silently no-op'd after `forge fmt` reflowed the replacement target |
 
 ---
 
-## On-chain lifecycle proof
+## Assisted-claim proof (Q11) — on the NEW demo vault
 
-Every transaction below is real, on Arc testnet, in order.
+The property: a **helper with no role whatsoever** triggers the payout, and the
+funds land at the registered heir. The helper is never paid, and pays the gas.
+
+| # | Step | Tx | Block | Gas |
+|---|---|---|---|---|
+| 1 | `approve` 2 USDC | [`0x57283087…996d14d4`](https://testnet.arcscan.app/tx/0x57283087f858c3bdb49858d271575280b9920a61af0935cb00705b47996d14d4) | 52730434 | 55,438 |
+| 2 | `deposit(2000000)` → `Active` | [`0x921d1c0b…68d0786f`](https://testnet.arcscan.app/tx/0x921d1c0beac4d42c3c136ca9516b50e69b75c61693124f8b5afa085068d0786f) | 52730443 | 73,383 |
+| 3 | **+240 s → `Claimable`**, `activeTier() == 0` | — | — | — |
+| 4 | **`claim(0)` called by the HELPER** `0x07bB7a1D…` | [`0x10937bae…06c8a14e`](https://testnet.arcscan.app/tx/0x10937bae7014fa7d3f2cd972b46d6b69b49adb2744dfae804bd5dbfe06c8a14e) | 52730923 | 75,620 |
+
+Measured balances around step 4:
+
+```
+heir   0x58003426…  2098566 -> 4098566   gained 2.000000 USDC
+helper 0x07bB7a1D…    96379 ->   94800   LOST 1579 (gas), gained nothing
+vault                2000000 ->       0   state Claimed
+```
+
+The helper is not a beneficiary of this vault and never becomes one. It could
+not name a destination — `claim` takes a tier index — and it walked away
+strictly poorer for having helped. That is invariant 4 intact and invariant 6
+strengthened, demonstrated on-chain rather than only in tests.
+
+## On-chain lifecycle proof — original run, on the SUPERSEDED vaults
+
+Every transaction below is real and still on-chain, but it ran against the
+pre-Q11 pair listed under *Superseded* above. It is kept because the properties
+it demonstrated (the 7-day timelock, the full ladder, care-mode capping,
+guardian spending not resetting the clock) are unchanged by the Q11 redeploy.
 
 ### Production vault — what a live vault can show today
 
 The time-gated tiers cannot be demonstrated on the production vault: reaching
 `Nagging` takes 90 days and `Claimable` 365. Those are covered by the demo vault
-below, the 119-test Foundry suite, and the simulated walkthrough at `/demo.html`.
+below, the 126-test Foundry suite, and the simulated walkthrough at `/demo.html`.
 
 | # | Step | Tx | Block | Gas |
 |---|---|---|---|---|
@@ -134,14 +165,19 @@ Reproduce with `script/arc-demo-lifecycle.sh` (needs a funded `.env`).
 | | |
 |---|---|
 | Deployer funded with | 20.000000 USDC |
-| Balance after | 11.322577 USDC |
-| **Total spent** | **8.677423 USDC** |
+| Balance after original run | 11.322577 USDC |
+| Balance after Q11 redeploy | 9.142928 USDC |
+| **Total spent** | **10.857072 USDC** |
 
 Of which ~8.0 USDC is *not* gas — 5 USDC sits in the production vault, 3 USDC
 went through the demo vault (1 to the care payee, 2 to the heir), and 0.4 USDC
 funded the four actor accounts. **Actual gas across all 16 transactions was
-roughly 0.28 USDC**, at ~20.9 gwei; the three vault deployments dominate it at
-~4.23M gas each (~0.088 USDC apiece).
+roughly 0.28 USDC**, at ~20.9 gwei; the vault deployments dominate it at ~4.23M
+gas each (~0.088 USDC apiece).
+
+The Q11 redeploy added 2.179649 USDC of spend: two more deployments, 2 USDC of
+principal through the new demo vault (all of which reached the heir), and the
+assisted-claim proof transactions.
 
 ---
 

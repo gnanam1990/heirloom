@@ -19,14 +19,16 @@ The core primitive is the **liveness ladder**: any activity resets the clock; si
 
 | | |
 |---|---|
-| Production vault | [`0xaef39a00…15a386e8`](https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8) — verified |
-| Demo vault (**short durations, demo-only**) | [`0x12dbb68F…ac37f6042`](https://testnet.arcscan.app/address/0x12dbb68F3c68BD47BF9799db7112f03ac37f6042) — verified |
+| Production vault | [`0x0CA49eBD…e80e18dA`](https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA) — verified |
+| Demo vault (**short durations, demo-only**) | [`0x0D884E62…df4deaDa`](https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa) — verified |
 | Chain | Arc testnet, id `5042002` |
 
 A full lifecycle ran on-chain — fund → heartbeat → care config → rotation
-propose/approve on the production vault, and the complete ladder
-`Active → Nagging → GuardianAlert → CareMode → care spend → Claimable → Claimed`
-on the demo vault. Every tx hash is in [`docs/addresses.md`](docs/addresses.md).
+propose/approve, and the complete ladder
+`Active → Nagging → GuardianAlert → CareMode → care spend → Claimable → Claimed`.
+Including an **assisted claim**: a helper with no role triggered the payout, the
+registered heir received 2.000000 USDC, and the helper gained nothing.
+Every tx hash is in [`docs/addresses.md`](docs/addresses.md).
 
 > ⚠️ **UNAUDITED TESTNET CODE.** Every contract in `src/` is labelled as such in
 > its NatSpec. Nothing here has been audited or externally reviewed. It is
@@ -48,8 +50,8 @@ on the demo vault. Every tx hash is in [`docs/addresses.md`](docs/addresses.md).
 |---|---|---|
 | 1 | Any owner signature resets the ladder to Active from any state | `LivenessLadder.t.sol`, `Vault.t.sol` |
 | 2 | Every config mutation is proposed, delayed 7 days, and vetoable. No direct setters | `ConfigGuard.t.sol` |
-| 3 | Guardians can only propose key rotation — never move funds | `Recovery.t.sol` |
-| 4 | Claims pay only pre-registered payees; no free-text destinations | `Claims.t.sol` |
+| 3 | Guardians are never paid; funds only reach owner-designated addresses | `Recovery.t.sol` |
+| 4 | Claims pay only pre-registered payees; no free-text destinations (any caller may *trigger*) | `Claims.t.sol` |
 | 5 | Care mode is destination-enforced and amount-capped, revoked instantly by owner activity | `Vault.t.sol`, `CareAllowlist.t.sol` |
 | 6 | Funds never dead-end: tiers cascade, the terminal tier never expires | `Claims.t.sol` |
 

@@ -161,12 +161,14 @@
     <div class="sim-label" style="border-color:var(--line);background:var(--panel)">
       <b>Verify on-chain →</b> the same contracts are live on Arc testnet (chain 5042002).
       This page simulates; those addresses actually ran it.<br>
-      <a href="https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8">Production vault</a> ·
-      <a href="https://testnet.arcscan.app/address/0x12dbb68F3c68BD47BF9799db7112f03ac37f6042">Demo vault (short durations)</a> ·
+      <a href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Production vault</a> ·
+      <a href="https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa">Demo vault (short durations)</a> ·
       <a href="https://github.com/gnanam1990/heirloom/blob/main/docs/addresses.md">All tx hashes</a><br>
       The full ladder below — Active → Nagging → GuardianAlert → CareMode → care spend →
-      Claimable → Claimed — was executed on-chain in four minutes on the demo vault:
-      <a href="https://testnet.arcscan.app/tx/0x2bb9fa99fc1aadb2dca3aa4aa4e09cd72c0520f9be9ce71d6e612aea8c75fbbb">the claim tx</a>.
+      Claimable → Claimed — was executed on-chain in four minutes on the demo vault.
+      The final payout was an <b>assisted claim</b>: a helper with no role triggered it, the
+      registered heir received the funds, and the helper gained nothing —
+      <a href="https://testnet.arcscan.app/tx/0x10937bae7014fa7d3f2cd972b46d6b69b49adb2744dfae804bd5dbfe06c8a14e">the claim tx</a>.
     </div>
   </section>
 
@@ -347,7 +349,7 @@
   <footer>
     <div class="foot-mark">Heirloom · built on Arc</div>
     <div>
-      <a href="https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8">Live vault on Arc testnet</a> ·
+      <a href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Live vault on Arc testnet</a> ·
       <a href="https://github.com/gnanam1990/heirloom/blob/main/docs/addresses.md">addresses &amp; tx hashes</a><br>
       <span class="warn">Simulated. Unaudited testnet software.</span> Do not use with real funds. · <a href="https://github.com/gnanam1990/heirloom">Source</a>
     </div>

@@ -6,203 +6,345 @@
 <title>Heirloom — the wallet that can't be lost</title>
 <meta name="description" content="Heirloom makes money liveness-aware. Lost keys, lost people, lost agents — funds never get stranded. Built on Arc.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --vault:#0E1B16; --panel:#142219; --line:#24382C;
-    --brass:#C8A24B; --brass-dim:#8a7136;
-    --ivory:#EFEAD8; --faded:#8FA294; --alert:#C96A4A;
+    --bg:#F7F8FA; --card:#FFFFFF; --line:#E4E8EF; --line-soft:#EDF0F5;
+    --ink:#0E1524; --ink-2:#5A6577; --ink-3:#7A8494;
+    --accent:#2775CA; --accent-2:#4CA0E8; --accent-dark:#1c5fa8;
+    --pill-bg:#EAF2FC; --pill-line:#D3E4F9; --btn-line:#DCE1E9;
+    --shadow:0 1px 3px rgba(14,21,36,.04),0 12px 40px rgba(14,21,36,.05);
+    --shadow-lift:0 2px 6px rgba(14,21,36,.06),0 20px 56px rgba(14,21,36,.09);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{background:var(--vault);color:var(--ivory);font-family:'Sora',sans-serif;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
-  a{color:var(--brass);text-decoration:none}
-  a:focus-visible,button:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
-  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 26px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{color:var(--accent-dark)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 
-  /* header */
-  header{display:flex;justify-content:space-between;align-items:center;padding:28px 0}
-  .mark{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.5rem;letter-spacing:.12em;text-transform:uppercase}
-  .mark .key{color:var(--brass)}
-  nav a{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded);margin-left:28px}
-  nav a:hover{color:var(--brass)}
+  /* ── nav ── */
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:26px 0;gap:16px;flex-wrap:wrap}
+  .logo{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.35rem;letter-spacing:-.02em;color:var(--ink)}
+  .logo span{color:var(--accent)}
+  .nav-links a{color:var(--ink-2);font-size:.85rem;font-weight:500;margin-left:26px}
+  .nav-links a:first-child{margin-left:0}
+  .nav-links a:hover{color:var(--accent)}
 
-  /* hero */
-  .hero{padding:72px 0 56px;border-bottom:1px solid var(--line)}
-  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);margin-bottom:22px}
-  h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(2.6rem,6vw,4.4rem);line-height:1.06;max-width:15ch}
-  h1 em{font-style:italic;color:var(--brass)}
-  .hero p.sub{max-width:52ch;margin-top:22px;color:var(--faded);font-size:1.05rem}
-  .cta-row{margin-top:34px;display:flex;gap:16px;flex-wrap:wrap}
-  .btn{display:inline-block;padding:13px 26px;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--brass);color:var(--brass);background:transparent;cursor:pointer;transition:background .2s,color .2s}
-  .btn.solid{background:var(--brass);color:var(--vault);font-weight:600}
-  .btn:hover{background:var(--brass);color:var(--vault)}
-  .btn.solid:hover{background:var(--ivory);border-color:var(--ivory)}
+  /* ── shared type ── */
+  .pill{display:inline-flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--pill-bg);border:1px solid var(--pill-line);padding:6px 13px;border-radius:100px;margin-bottom:26px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:beat 1.6s infinite;flex:0 0 7px}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(2.6rem,6vw,4.6rem);line-height:1.04;letter-spacing:-.03em;max-width:16ch}
+  .grad{background:linear-gradient(100deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  h2{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.7rem,3.4vw,2.5rem);line-height:1.14;letter-spacing:-.025em;max-width:20ch}
+  h3{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.12rem;letter-spacing:-.015em}
+  .sub{font-size:1.12rem;color:var(--ink-2);max-width:52ch;margin-top:22px;font-weight:400}
+  .lede{color:var(--ink-2);max-width:58ch;margin-top:14px;font-size:1rem}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:block}
 
-  /* heartbeat demo — the signature */
-  .pulse-card{margin-top:52px;background:var(--panel);border:1px solid var(--line);padding:26px 28px;max-width:560px}
-  .pulse-head{display:flex;align-items:center;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded)}
-  .dot{width:9px;height:9px;border-radius:50%;background:var(--brass);animation:beat 1.6s infinite}
-  @keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
-  .pulse-state{font-family:'Cormorant Garamond',serif;font-size:2rem;margin:14px 0 4px;color:var(--ivory)}
-  .pulse-state.warn{color:var(--alert)}
-  .pulse-sub{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--faded);min-height:1.4em}
-  .meter{height:3px;background:var(--line);margin:18px 0}
-  .meter i{display:block;height:100%;background:var(--brass);width:0%}
-  .pulse-card button{margin-top:6px}
-  .pulse-note{font-size:.72rem;color:var(--faded);margin-top:14px}
+  /* ── buttons ── */
+  .cta{margin-top:32px;display:flex;gap:13px;flex-wrap:wrap}
+  .btn{font-size:.9rem;font-weight:600;padding:14px 28px;border-radius:10px;cursor:pointer;text-decoration:none;transition:background .2s,border-color .2s,color .2s,transform .2s,box-shadow .2s;border:1px solid transparent;display:inline-block;font-family:'Inter',sans-serif}
+  .btn.pri{background:var(--accent);color:#fff}
+  .btn.pri:hover{background:var(--accent-dark);color:#fff;transform:translateY(-1px);box-shadow:0 8px 22px rgba(39,117,202,.24)}
+  .btn.sec{background:var(--card);color:var(--ink);border-color:var(--btn-line)}
+  .btn.sec:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
 
-  section{padding:72px 0;border-bottom:1px solid var(--line)}
-  h2{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(1.8rem,3.4vw,2.6rem);margin-bottom:14px}
-  .lede{color:var(--faded);max-width:58ch;margin-bottom:40px}
+  /* ── cards ── */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px;box-shadow:var(--shadow)}
 
-  /* problem */
-  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
-  .stat{background:var(--vault);padding:26px}
-  .stat b{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.9rem;color:var(--brass);display:block;margin-bottom:6px}
-  .stat span{font-size:.85rem;color:var(--faded)}
+  section{padding:74px 0;border-top:1px solid var(--line)}
+  .hero{padding:64px 0 56px;border-top:none}
 
-  /* ladder */
-  .ladder{border-left:1px solid var(--brass-dim);margin-left:8px}
-  .rung{position:relative;padding:22px 0 22px 34px}
-  .rung::before{content:"";position:absolute;left:-5px;top:32px;width:9px;height:9px;background:var(--vault);border:1px solid var(--brass)}
-  .rung .t{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--brass)}
-  .rung h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.35rem;margin:6px 0 4px}
-  .rung p{color:var(--faded);font-size:.92rem;max-width:56ch}
-  .rung.reset .t{color:var(--ivory)}
-  .rung.reset::before{background:var(--brass)}
+  /* ── hero ladder demo ── */
+  .demo-card{margin-top:34px;max-width:620px}
+  .demo-head{display:flex;align-items:center;gap:11px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+  .demo-state{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.9rem;margin:12px 0 3px;letter-spacing:-.02em;transition:color .3s}
+  .demo-state.warn{color:var(--accent)}
+  .demo-sub{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--ink-3);min-height:1.3em}
+  .demo-track{height:3px;border-radius:3px;margin:18px 0;overflow:hidden;background:var(--line)}
+  .demo-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .12s linear}
+  .demo-btn{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:11px 20px;border-radius:8px;cursor:pointer;border:1px solid var(--accent);background:transparent;color:var(--accent);transition:.2s}
+  .demo-btn:hover{background:var(--accent);color:#fff}
+  .demo-note{font-size:.84rem;color:var(--ink-3);margin-top:14px}
 
-  /* covers */
-  .covers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
-  .cover{background:var(--vault);padding:26px}
-  .cover .t{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--brass);display:block;margin-bottom:10px}
-  .cover h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.3rem;margin-bottom:8px}
-  .cover p{font-size:.88rem;color:var(--faded)}
+  /* ── stats ── */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:56px;padding-top:40px;border-top:1px solid var(--line)}
+  .stat b{font-family:'Space Grotesk',sans-serif;font-size:2.1rem;font-weight:700;color:var(--ink);letter-spacing:-.02em;display:block;line-height:1.1}
+  .stat span{font-size:.86rem;color:var(--ink-3)}
 
-  /* invariant */
-  .invariant{background:var(--panel);border:1px solid var(--line);padding:44px 34px;text-align:center}
-  .invariant blockquote{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:clamp(1.5rem,3vw,2.2rem);line-height:1.3;max-width:26ch;margin:0 auto 16px}
-  .invariant p{color:var(--faded);font-size:.9rem;max-width:60ch;margin:0 auto}
+  /* ── liveness ladder ── */
+  .ladder{margin-top:40px;position:relative;padding-left:30px}
+  .ladder::before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--accent-2),var(--accent) 22%,var(--line) 96%)}
+  .rung{position:relative;padding:0 0 34px 0}
+  .rung:last-child{padding-bottom:0}
+  .rung::before{content:"";position:absolute;left:-30px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--card);border:2px solid var(--line);transition:border-color .3s,box-shadow .3s}
+  .rung.on::before{border-color:var(--accent);box-shadow:0 0 0 4px var(--pill-bg)}
+  .rung .t{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .rung.on .t{color:var(--accent)}
+  .rung h3{margin:7px 0 6px}
+  .rung p{color:var(--ink-2);font-size:.94rem;max-width:58ch}
 
-  footer{padding:44px 0 60px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:18px;color:var(--faded);font-size:.78rem}
-  footer .foot-mark{font-family:'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase}
-  footer .warn{color:var(--alert)}
+  /* ── coverage ── */
+  .covers{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:18px;margin-top:40px}
+  .cover{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:var(--shadow);transition:transform .25s,box-shadow .25s,border-color .25s}
+  .cover:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift);border-color:var(--pill-line)}
+  .cover .t{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:11px}
+  .cover h3{margin-bottom:8px}
+  .cover p{font-size:.92rem;color:var(--ink-2)}
 
-  @media (prefers-reduced-motion: reduce){
-    .dot{animation:none}
+  /* ── invariant ── */
+  .invariant{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:56px 34px;text-align:center;box-shadow:var(--shadow)}
+  .invariant blockquote{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:clamp(1.6rem,3.4vw,2.5rem);line-height:1.18;letter-spacing:-.025em;max-width:22ch;margin:0 auto 18px}
+  .invariant p{color:var(--ink-2);max-width:62ch;margin:0 auto;font-size:.98rem}
+
+  /* ── live on arc ── */
+  .live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:36px}
+  .live-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow);transition:transform .25s,box-shadow .25s,border-color .25s}
+  .live-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift);border-color:var(--pill-line)}
+  .live-card .t{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:10px}
+  .live-card .addr{font-family:'IBM Plex Mono',monospace;font-size:.8rem;word-break:break-all;display:block;margin-bottom:8px}
+  .live-card p{font-size:.86rem;color:var(--ink-3)}
+  .live-meta{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--ink-3);margin-top:26px;line-height:1.9}
+  .live-meta b{color:var(--ink);font-weight:500}
+
+  /* ── footer ── */
+  footer{border-top:1px solid var(--line);padding:34px 0 56px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .foot-mark{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .foot-right{font-size:.82rem;color:var(--ink-3);text-align:right;line-height:1.9}
+  .warn{color:var(--accent);font-weight:500}
+
+  /* ── motion ── */
+  @keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .fu{animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) both}
+  .fu2{animation:fadeUp .7s .1s cubic-bezier(.2,.7,.2,1) both}
+  .fu3{animation:fadeUp .7s .2s cubic-bezier(.2,.7,.2,1) both}
+  .fu4{animation:fadeUp .7s .3s cubic-bezier(.2,.7,.2,1) both}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.06s}.reveal.d2{transition-delay:.12s}
+  .reveal.d3{transition-delay:.18s}.reveal.d4{transition-delay:.24s}
+
+  @media (max-width:760px){
+    .stats{grid-template-columns:1fr;gap:22px}
+    section{padding:56px 0}
+    .invariant{padding:40px 22px}
+    footer{flex-direction:column}
+    .foot-right{text-align:left}
+    .nav-links a{margin-left:0;margin-right:18px}
+  }
+  @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
+    .fu,.fu2,.fu3,.fu4{animation:none}
+    .dot{animation:none}
+    .reveal{opacity:1;transform:none;transition:none}
+    *{transition:none!important}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <header>
-    <div class="mark">Heir<span class="key">loom</span></div>
-    <nav aria-label="Main">
-      <a href="#ladder">Mechanism</a>
-      <a href="#covers">Coverage</a>
-      <a href="https://github.com/gnanam1990/heirloom">GitHub</a>
+    <nav class="nav" aria-label="Main">
+      <div class="logo">Heir<span>loom</span></div>
+      <div class="nav-links">
+        <a href="#ladder">Mechanism</a>
+        <a href="#covers">Coverage</a>
+        <a href="#live">Live on Arc</a>
+        <a href="https://github.com/gnanam1990/heirloom">GitHub</a>
+      </div>
     </nav>
   </header>
 
-  <section class="hero" style="border-top:1px solid var(--line)">
-    <p class="eyebrow">Liveness-aware money · non-custodial</p>
-    <h1>The wallet that <em>can't be lost.</em></h1>
-    <p class="sub">Not to death, not to forgetting, not to thieves. Money today assumes its owner is alive, present, and remembers everything. Heirloom removes that assumption — so funds never get stranded.</p>
-    <div class="cta-row">
-      <a class="btn solid" href="/demo.html">Try the demo →</a>
-      <a class="btn" href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Live on Arc testnet ↗</a>
-      <a class="btn" href="https://github.com/gnanam1990/heirloom">View the contracts</a>
-      <a class="btn" href="#ladder">How it works</a>
+  <!-- ══════════ HERO ══════════ -->
+  <section class="hero">
+    <div class="pill fu"><span class="dot"></span> Liveness-aware money · non-custodial</div>
+    <h1 class="fu2">The wallet that <span class="grad">can't be lost.</span></h1>
+    <p class="sub fu3">Not to death, not to forgetting, not to thieves. Money today assumes its owner is alive, present, and remembers everything. Heirloom removes that assumption — so funds never get stranded.</p>
+
+    <div class="cta fu4">
+      <a class="btn pri" href="/demo.html">Try the demo →</a>
+      <a class="btn sec" href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Live on Arc testnet ↗</a>
+      <a class="btn sec" href="https://github.com/gnanam1990/heirloom">View the contracts</a>
     </div>
 
-    <div class="pulse-card" id="demo">
-      <div class="pulse-head"><span class="dot" id="dot"></span> Vault · liveness ladder — accelerated demo</div>
-      <div class="pulse-state" id="state">Active</div>
-      <div class="pulse-sub" id="sub">Owner activity detected. Clock reset.</div>
-      <div class="meter" aria-hidden="true"><i id="bar"></i></div>
-      <button class="btn" id="beatBtn" type="button">Sign heartbeat</button>
-      <p class="pulse-note">One signature — any transaction counts — resets everything. Silence escalates: nag → guardians → care mode → claimable.</p>
+    <div class="card demo-card fu4" id="demo">
+      <div class="demo-head"><span class="dot" id="dot"></span> Vault · liveness ladder — accelerated demo</div>
+      <div class="demo-state" id="state">Active</div>
+      <div class="demo-sub" id="sub">Owner activity detected. Clock reset.</div>
+      <div class="demo-track" aria-hidden="true"><div class="demo-fill" id="bar"></div></div>
+      <button class="demo-btn" id="beatBtn" type="button">Sign heartbeat</button>
+      <p class="demo-note">One signature — any transaction counts — resets everything. Silence escalates: nag → guardians → care mode → claimable.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat reveal"><b>20%+</b><span>of all Bitcoin estimated permanently lost to key loss</span></div>
+      <div class="stat reveal d1"><b>$190M</b><span>locked at QuadrigaCX when its sole keyholder died</span></div>
+      <div class="stat reveal d2"><b>₹ tens of thousands cr</b><span>sit unclaimed in Indian banks and insurers — money that never learned its owner was gone</span></div>
     </div>
   </section>
 
+  <!-- ══════════ PROBLEM ══════════ -->
   <section id="problem">
-    <h2>Onchain assets have one silent failure mode</h2>
-    <p class="lede">The cause never matters — a forgotten seed phrase, a death, a stolen device, a deprecated AI agent, a founder who held the only key. The outcome is identical: the owner can no longer sign, and the money strands forever.</p>
-    <div class="stat-row">
-      <div class="stat"><b>20%+</b><span>of all Bitcoin estimated permanently lost to key loss</span></div>
-      <div class="stat"><b>$190M</b><span>locked at QuadrigaCX when its sole keyholder died</span></div>
-      <div class="stat"><b>₹ tens of thousands cr</b><span>sit unclaimed in Indian banks and insurers — money that never learned its owner was gone</span></div>
-    </div>
+    <span class="eyebrow reveal">The failure mode</span>
+    <h2 class="reveal">Onchain assets have one silent failure mode</h2>
+    <p class="lede reveal d1">The cause never matters — a forgotten seed phrase, a death, a stolen device, a deprecated AI agent, a founder who held the only key. The outcome is identical: the owner can no longer sign, and the money strands forever.</p>
   </section>
 
+  <!-- ══════════ LADDER ══════════ -->
   <section id="ladder">
-    <h2>The liveness ladder</h2>
-    <p class="lede">Any activity resets the clock. Silence escalates — slowly, loudly, and always reversibly by one signature from the owner.</p>
+    <span class="eyebrow reveal">The mechanism</span>
+    <h2 class="reveal">The liveness ladder</h2>
+    <p class="lede reveal d1">Any activity resets the clock. Silence escalates — slowly, loudly, and always reversibly by one signature from the owner.</p>
+
     <div class="ladder">
-      <div class="rung reset"><span class="t">Any time</span><h3>Owner signs → everything resets</h3><p>Any transaction is a heartbeat. Travel, hospital, prison — declare a pause in advance and the clock waits.</p></div>
-      <div class="rung"><span class="t">3 months silent</span><h3>The nag</h3><p>Email and Telegram reminders. Most stories end here.</p></div>
-      <div class="rung"><span class="t">6 months</span><h3>Guardians alerted</h3><p>Your M-of-N circle is notified. They can propose rotating the vault to a new key — recovery for a forgotten seed — behind a 7-day timelock you can always veto.</p></div>
-      <div class="rung"><span class="t">9 months</span><h3>Care mode</h3><p>A designated guardian gets capped monthly spending for essentials — not the keys. Instantly revoked by any owner activity.</p></div>
-      <div class="rung"><span class="t">12 months</span><h3>The cascade</h3><p>Beneficiaries claim in your order: your own backup wallet first, then family, then a charity sink. Unclaimed tiers cascade — funds can never dead-end.</p></div>
+      <div class="rung on reveal">
+        <span class="t">Any time</span>
+        <h3>Owner signs → everything resets</h3>
+        <p>Any transaction is a heartbeat. Travel, hospital, prison — declare a pause in advance and the clock waits.</p>
+      </div>
+      <div class="rung reveal d1">
+        <span class="t">3 months silent</span>
+        <h3>The nag</h3>
+        <p>Email and Telegram reminders. Most stories end here.</p>
+      </div>
+      <div class="rung reveal d2">
+        <span class="t">6 months</span>
+        <h3>Guardians alerted</h3>
+        <p>Your M-of-N circle is notified. They can propose rotating the vault to a new key — recovery for a forgotten seed — behind a 7-day timelock you can always veto.</p>
+      </div>
+      <div class="rung reveal d3">
+        <span class="t">9 months</span>
+        <h3>Care mode</h3>
+        <p>A designated guardian gets capped monthly spending for essentials — not the keys. Instantly revoked by any owner activity.</p>
+      </div>
+      <div class="rung reveal d4">
+        <span class="t">12 months</span>
+        <h3>The cascade</h3>
+        <p>Beneficiaries claim in your order: your own backup wallet first, then family, then a charity sink. Unclaimed tiers cascade — funds can never dead-end.</p>
+      </div>
     </div>
   </section>
 
+  <!-- ══════════ COVERAGE ══════════ -->
   <section id="covers">
-    <h2>One mechanism. Five endings rewritten.</h2>
-    <p class="lede">Recovery, inheritance, incapacity, continuity, and agent cleanup are the same contract seen from five directions.</p>
+    <span class="eyebrow reveal">Coverage</span>
+    <h2 class="reveal">One mechanism. Five endings rewritten.</h2>
+    <p class="lede reveal d1">Recovery, inheritance, incapacity, continuity, and agent cleanup are the same contract seen from five directions.</p>
+
     <div class="covers">
-      <div class="cover"><span class="t">Forgotten keys</span><h3>Social recovery</h3><p>Guardians rotate the vault to your new key. The lock changes — the house doesn't. No seed phrase required, ever again.</p></div>
-      <div class="cover"><span class="t">Death</span><h3>Inheritance without probate pain</h3><p>A non-crypto heir claims through an email link and receives dollars, not jargon. An encrypted note from you decrypts only on claim.</p></div>
-      <div class="cover"><span class="t">Decline</span><h3>Care, not surrender</h3><p>Bills get paid by someone you chose, within limits you set, while you keep the keys.</p></div>
-      <div class="cover"><span class="t">Founder risk</span><h3>Continuity for treasuries</h3><p>Org funds cascade to a co-founder multisig instead of dying with one person. The QuadrigaCX problem, closed.</p></div>
-      <div class="cover"><span class="t">AI agents</span><h3>The watchdog</h3><p>An agent stops heartbeating — deprecated, crashed, abandoned — and its treasury walks home to the operator.</p></div>
+      <div class="cover reveal"><span class="t">Forgotten keys</span><h3>Social recovery</h3><p>Guardians rotate the vault to your new key. The lock changes — the house doesn't. No seed phrase required, ever again.</p></div>
+      <div class="cover reveal d1"><span class="t">Death</span><h3>Inheritance without probate pain</h3><p>A non-crypto heir claims through an email link and receives dollars, not jargon. An encrypted note from you decrypts only on claim.</p></div>
+      <div class="cover reveal d2"><span class="t">Decline</span><h3>Care, not surrender</h3><p>Bills get paid by someone you chose, within limits you set, while you keep the keys.</p></div>
+      <div class="cover reveal d3"><span class="t">Founder risk</span><h3>Continuity for treasuries</h3><p>Org funds cascade to a co-founder multisig instead of dying with one person. The QuadrigaCX problem, closed.</p></div>
+      <div class="cover reveal d4"><span class="t">AI agents</span><h3>The watchdog</h3><p>An agent stops heartbeating — deprecated, crashed, abandoned — and its treasury walks home to the operator.</p></div>
     </div>
   </section>
 
+  <!-- ══════════ INVARIANT ══════════ -->
   <section>
-    <div class="invariant">
+    <div class="invariant reveal">
       <blockquote>"The lock changed.<br>The house didn't."</blockquote>
       <p>Every configuration change — heirs, guardians, timings — takes a 7-day timelock with notification and owner veto. A thief with your key cannot silently redirect your safety net. Guardians can propose; only contracts move funds.</p>
     </div>
   </section>
 
+  <!-- ══════════ LIVE ON ARC ══════════ -->
+  <section id="live">
+    <span class="eyebrow reveal">Deployed &amp; verified</span>
+    <h2 class="reveal">Live on Arc testnet</h2>
+    <p class="lede reveal d1">Both vaults are deployed, source-verified, and have run a full lifecycle on-chain — including an assisted claim, where a helper with no role triggered the payout and the registered heir received the funds.</p>
+
+    <div class="live-grid">
+      <div class="live-card reveal">
+        <span class="t">Production vault</span>
+        <a class="addr" href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA</a>
+        <p>Real ladder — 90 / 180 / 270 / 365 days. Source verified.</p>
+      </div>
+      <div class="live-card reveal d1">
+        <span class="t">Demo vault · short durations</span>
+        <a class="addr" href="https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa">0x0D884E62B1dE894df1651910849E534aDf4deaDa</a>
+        <p>Seconds-scale tiers so the cascade can be watched end to end. Demo-only — not a safety net.</p>
+      </div>
+      <div class="live-card reveal d2">
+        <span class="t">Assisted claim receipt</span>
+        <a class="addr" href="https://testnet.arcscan.app/tx/0x10937bae7014fa7d3f2cd972b46d6b69b49adb2744dfae804bd5dbfe06c8a14e">0x10937bae…06c8a14e</a>
+        <p>A helper triggered the claim. The heir was paid; the helper gained nothing and paid the gas.</p>
+      </div>
+    </div>
+
+    <p class="live-meta reveal d3">
+      Chain <b>Arc testnet · 5042002</b><br>
+      Explorer <b>testnet.arcscan.app</b><br>
+      Suite <b>126 contract tests</b>, including a stateful multi-actor invariant suite<br>
+      Addresses &amp; every transaction hash: <a href="https://github.com/gnanam1990/heirloom/blob/main/docs/addresses.md">docs/addresses.md</a>
+    </p>
+  </section>
+
   <footer>
     <div class="foot-mark">Heirloom · built on Arc</div>
-    <div>
-      <span style="color:var(--brass)">Live on Arc testnet</span> ·
-      <a href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">vault</a> ·
-      <a href="https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa">demo vault</a><br>
-      <span class="warn">Unaudited testnet software.</span> Do not use with real funds. · <a href="https://github.com/gnanam1990/heirloom">Source</a>
+    <div class="foot-right">
+      <a href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Live vault</a> ·
+      <a href="https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa">Demo vault</a> ·
+      <a href="https://github.com/gnanam1990/heirloom">Source</a><br>
+      <span class="warn">Unaudited testnet software.</span> Do not use with real funds.
     </div>
   </footer>
 </div>
 
 <script>
 (function(){
-  const tiers=[
-    {at:0,   label:"Active",          sub:"Owner activity detected. Clock reset.",         warn:false},
-    {at:25,  label:"Nagging",         sub:"3 months silent → reminders sent.",             warn:false},
-    {at:50,  label:"Guardians alerted",sub:"6 months → your circle is notified.",          warn:true},
-    {at:75,  label:"Care mode",       sub:"9 months → capped essentials spending only.",   warn:true},
-    {at:100, label:"Claimable",       sub:"12 months → cascade begins. Funds walk home.",  warn:true}
-  ];
-  const bar=document.getElementById('bar'), state=document.getElementById('state'),
-        sub=document.getElementById('sub'), btn=document.getElementById('beatBtn');
-  let p=0, timer=null;
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function render(){
-    bar.style.width=p+'%';
-    let cur=tiers[0];
-    for(const t of tiers){ if(p>=t.at) cur=t; }
-    state.textContent=cur.label;
-    state.className='pulse-state'+(cur.warn?' warn':'');
-    sub.textContent=cur.sub;
+  "use strict";
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── scroll reveals ── */
+  var revealables = document.querySelectorAll('.reveal');
+  if (reduced || !('IntersectionObserver' in window)) {
+    revealables.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {rootMargin: '0px 0px -8% 0px', threshold: 0.08});
+    revealables.forEach(function(el){ io.observe(el); });
   }
-  function tick(){ p=Math.min(100,p+0.5); render(); if(p>=100){clearInterval(timer);timer=null;} }
-  function start(){ if(!timer && !reduced) timer=setInterval(tick,120); }
-  btn.addEventListener('click',()=>{ p=0; render(); start(); });
-  render(); start();
+
+  /* ── hero liveness ladder demo ── */
+  var tiers = [
+    {at:0,   label:"Active",           sub:"Owner activity detected. Clock reset.",        warn:false, rung:0},
+    {at:25,  label:"Nagging",          sub:"3 months silent → reminders sent.",            warn:false, rung:1},
+    {at:50,  label:"Guardians alerted",sub:"6 months → your circle is notified.",          warn:true,  rung:2},
+    {at:75,  label:"Care mode",        sub:"9 months → capped essentials spending only.",  warn:true,  rung:3},
+    {at:100, label:"Claimable",        sub:"12 months → cascade begins. Funds walk home.", warn:true,  rung:4}
+  ];
+  var bar = document.getElementById('bar'),
+      state = document.getElementById('state'),
+      sub = document.getElementById('sub'),
+      btn = document.getElementById('beatBtn'),
+      rungs = document.querySelectorAll('#ladder .rung');
+  var p = 0, timer = null;
+
+  function render(){
+    bar.style.width = p + '%';
+    var cur = tiers[0];
+    for (var i=0;i<tiers.length;i++){ if (p >= tiers[i].at) cur = tiers[i]; }
+    state.textContent = cur.label;
+    state.className = 'demo-state' + (cur.warn ? ' warn' : '');
+    sub.textContent = cur.sub;
+    /* light the matching rung in the ladder section below */
+    for (var r=0;r<rungs.length;r++){ rungs[r].classList.toggle('on', r === cur.rung); }
+  }
+  function tick(){ p = Math.min(100, p + 0.5); render(); if (p >= 100){ clearInterval(timer); timer = null; } }
+  function start(){ if (!timer && !reduced) timer = setInterval(tick, 120); }
+
+  btn.addEventListener('click', function(){ p = 0; render(); start(); });
+  render();
+  start();
 })();
 </script>
 </body>

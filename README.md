@@ -13,7 +13,20 @@ One mechanism, five problems solved:
 
 The core primitive is the **liveness ladder**: any activity resets the clock; silence escalates through nag → guardian alert → care mode → claimable. Every configuration change takes a 7-day timelock with owner veto — a thief with your key cannot silently redirect your safety net.
 
-**Status:** early build · Arc testnet · unaudited — do not use with real funds.
+**Status:** early build · **live on Arc testnet** · unaudited — do not use with real funds.
+
+## Live on Arc testnet
+
+| | |
+|---|---|
+| Production vault | [`0xaef39a00…15a386e8`](https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8) — verified |
+| Demo vault (**short durations, demo-only**) | [`0x12dbb68F…ac37f6042`](https://testnet.arcscan.app/address/0x12dbb68F3c68BD47BF9799db7112f03ac37f6042) — verified |
+| Chain | Arc testnet, id `5042002` |
+
+A full lifecycle ran on-chain — fund → heartbeat → care config → rotation
+propose/approve on the production vault, and the complete ladder
+`Active → Nagging → GuardianAlert → CareMode → care spend → Claimable → Claimed`
+on the demo vault. Every tx hash is in [`docs/addresses.md`](docs/addresses.md).
 
 > ⚠️ **UNAUDITED TESTNET CODE.** Every contract in `src/` is labelled as such in
 > its NatSpec. Nothing here has been audited or externally reviewed. It is

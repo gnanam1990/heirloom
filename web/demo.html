@@ -152,9 +152,21 @@
     <p class="sub">A full vault lifetime in one screen — silence, escalation, care, recovery, theft and inheritance. Drag the clock forward and see exactly what the contracts would do.</p>
 
     <div class="sim-label" role="note">
-      <b>Simulated walkthrough</b> — logic mirrored from the Foundry test suite (96 tests).
-      Live Arc-testnet version coming. No wallet, no chain, no real funds: every number here is
-      make-believe, but every rule is the one the contracts actually enforce.
+      <b>Simulated walkthrough</b> — logic mirrored from the Foundry test suite (119 tests,
+      including a stateful multi-actor invariant suite). No wallet, no chain, no real funds here:
+      every number on this page is make-believe, but every rule is the one the contracts
+      actually enforce — and those contracts are now live on Arc testnet, linked below.
+    </div>
+
+    <div class="sim-label" style="border-color:var(--line);background:var(--panel)">
+      <b>Verify on-chain →</b> the same contracts are live on Arc testnet (chain 5042002).
+      This page simulates; those addresses actually ran it.<br>
+      <a href="https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8">Production vault</a> ·
+      <a href="https://testnet.arcscan.app/address/0x12dbb68F3c68BD47BF9799db7112f03ac37f6042">Demo vault (short durations)</a> ·
+      <a href="https://github.com/gnanam1990/heirloom/blob/main/docs/addresses.md">All tx hashes</a><br>
+      The full ladder below — Active → Nagging → GuardianAlert → CareMode → care spend →
+      Claimable → Claimed — was executed on-chain in four minutes on the demo vault:
+      <a href="https://testnet.arcscan.app/tx/0x2bb9fa99fc1aadb2dca3aa4aa4e09cd72c0520f9be9ce71d6e612aea8c75fbbb">the claim tx</a>.
     </div>
   </section>
 
@@ -334,7 +346,11 @@
 
   <footer>
     <div class="foot-mark">Heirloom · built on Arc</div>
-    <div><span class="warn">Simulated. Unaudited testnet software.</span> Do not use with real funds. · <a href="https://github.com/gnanam1990/heirloom">Source</a></div>
+    <div>
+      <a href="https://testnet.arcscan.app/address/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8">Live vault on Arc testnet</a> ·
+      <a href="https://github.com/gnanam1990/heirloom/blob/main/docs/addresses.md">addresses &amp; tx hashes</a><br>
+      <span class="warn">Simulated. Unaudited testnet software.</span> Do not use with real funds. · <a href="https://github.com/gnanam1990/heirloom">Source</a>
+    </div>
   </footer>
 </div>
 

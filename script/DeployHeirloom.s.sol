@@ -31,9 +31,12 @@ contract DeployHeirloom is Script {
     uint256 internal constant ARC_TESTNET_CHAIN_ID = 5042002;
 
     /// @notice Production ladder from PRD §2: 90 / 180 / 270 / 365 days.
-    function _defaultLadder() internal pure returns (T.LadderConfig memory) {
+    function _defaultLadder() internal view returns (T.LadderConfig memory) {
         return T.LadderConfig({
-            nagAfter: 90 days, guardianAlertAfter: 180 days, careModeAfter: 270 days, claimableAfter: 365 days
+            nagAfter: uint32(vm.envOr("HEIRLOOM_LADDER_NAG", uint256(90 days))),
+            guardianAlertAfter: uint32(vm.envOr("HEIRLOOM_LADDER_ALERT", uint256(180 days))),
+            careModeAfter: uint32(vm.envOr("HEIRLOOM_LADDER_CARE", uint256(270 days))),
+            claimableAfter: uint32(vm.envOr("HEIRLOOM_LADDER_CLAIMABLE", uint256(365 days)))
         });
     }
 

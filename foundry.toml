@@ -23,8 +23,21 @@ runs = 512
 max_test_rejects = 100_000
 
 [invariant]
+# Stateful, multi-actor invariant testing (test/invariant/). Each run drives a
+# random SEQUENCE of `depth` handler calls; `runs` is how many such sequences.
+#
+# 256 x 100 is a sane local default — roughly 25k calls per invariant, which
+# reliably reaches Claimable, matures 7-day proposals, and completes rotations
+# and claims. RAISE THESE IN CI: runs = 1000, depth = 200 is a good nightly
+# setting (FOUNDRY_INVARIANT_RUNS / FOUNDRY_INVARIANT_DEPTH override without
+# editing this file).
 runs = 256
-depth = 64
+depth = 100
+
+# The handler clamps inputs but cannot make every call valid — a claim outside
+# the window or an unripe execute SHOULD revert. Aborting the run on those would
+# mean sequences die early and deep states are never reached. The handler
+# try/catches internally so ghosts only record what actually landed.
 fail_on_revert = false
 
 [rpc_endpoints]

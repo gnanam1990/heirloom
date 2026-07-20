@@ -40,6 +40,29 @@ The core primitive is the **liveness ladder**: any activity resets the clock; si
 | 5 | Care mode is destination-enforced and amount-capped, revoked instantly by owner activity | `Vault.t.sol`, `CareAllowlist.t.sol` |
 | 6 | Funds never dead-end: tiers cascade, the terminal tier never expires | `Claims.t.sol` |
 
+### Stateful invariant testing
+
+The per-function fuzz tests above check one call at a time. `test/invariant/`
+additionally drives random **sequences** of calls from every actor at once
+(owner, three guardians, care guardian, heirs, a no-rights thief) against a
+bounded handler, and asserts the same six properties hold after any ordering —
+which is where interaction bugs live.
+
+```
+forge test --match-path "test/invariant/*" -vv
+```
+
+Defaults are 256 runs x 100 depth (`[invariant]` in `foundry.toml`). Raise for CI
+without editing the file:
+
+```
+FOUNDRY_INVARIANT_RUNS=1000 FOUNDRY_INVARIANT_DEPTH=250 forge test --match-path "test/invariant/*"
+```
+
+The suite prints a coverage summary after each run (deepest rung reached,
+rotations, claims, care spends). **Read it.** If a sequence never reaches
+`Claimable`, the invariants guarding the claim path passed vacuously.
+
 ## Build
 
 Dependencies are git submodules, so clone recursively:

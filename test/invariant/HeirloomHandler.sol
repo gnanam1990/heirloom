@@ -67,8 +67,13 @@ contract HeirloomHandler is Test {
     uint256 public ghostTotalOut; // everything that ever left the vault
 
     bool public ghostConfigChangedWithoutExecute;
-    bool public ghostGuardianReducedBalance;
-    bool public ghostThiefMovedFunds;
+    /// @dev Since Q11 anyone may TRIGGER a claim, so "reduced the balance" is no
+    ///      longer a violation on its own — a guardian or a stranger paying an
+    ///      heir is the feature working. What must never happen is an actor
+    ///      being PAID, or funds reaching an address the owner never designated.
+    bool public ghostGuardianGainedFunds;
+    bool public ghostThiefGainedFunds;
+    bool public ghostUnauthorizedRecipient;
     bool public ghostThiefChangedConfig;
     bool public ghostPaidUnapprovedPayee;
     bool public ghostCareCapBreached;
@@ -78,6 +83,7 @@ contract HeirloomHandler is Test {
     bool public ghostRotated;
     uint256 public ghostRotations;
     uint256 public ghostClaims;
+    uint256 public ghostAssistedClaims;
     uint256 public ghostCareSpends;
     uint256 public ghostExecutions;
     uint256 public ghostVetoes;
@@ -161,26 +167,81 @@ contract HeirloomHandler is Test {
         return keccak256(acc);
     }
 
-    /// @param role          who is acting, for attribution
-    /// @param mayChangeConfig true only for `execute`, the one entry point that
-    ///                        is allowed to apply a matured proposal
+    /// @notice Addresses the OWNER has designated in some role: the owner
+    ///         themselves, every registered beneficiary, and every care payee in
+    ///         the pool. Guardians and the thief are deliberately absent, so any
+    ///         gain by them shows up as an unauthorized recipient.
+    function _authorizedRecipients() internal view returns (address[] memory out) {
+        out = new address[](1 + heirs.length + carePayeePool.length);
+        uint256 k;
+        out[k++] = vault.owner();
+        for (uint256 i = 0; i < heirs.length; i++) {
+            out[k++] = heirs[i];
+        }
+        for (uint256 i = 0; i < carePayeePool.length; i++) {
+            out[k++] = carePayeePool[i];
+        }
+    }
+
+    function _sumBalances(address[] memory who) internal view returns (uint256 total) {
+        for (uint256 i = 0; i < who.length; i++) {
+            total += usdc.balanceOf(who[i]);
+        }
+    }
+
+    struct Snap {
+        bytes32 fingerprint;
+        uint256 vaultBal;
+        uint256 authorizedBal;
+        uint256 guardianBal;
+        uint256 thiefBal;
+    }
+
+    function _snap() internal view returns (Snap memory) {
+        return Snap({
+            fingerprint: configFingerprint(),
+            vaultBal: usdc.balanceOf(address(vault)),
+            authorizedBal: _sumBalances(_authorizedRecipients()),
+            guardianBal: usdc.balanceOf(guardians[0]) + usdc.balanceOf(guardians[1])
+                + usdc.balanceOf(guardians[2]),
+            thiefBal: usdc.balanceOf(thief)
+        });
+    }
+
+    /// @dev `role` attributes a gain to the kind of actor that caused it.
+    ///      `mayChangeConfig` is true only for `execute`, the one entry point
+    ///      allowed to apply a matured proposal.
     modifier tracked(uint8 role, bool mayChangeConfig, string memory action) {
-        bytes32 fpBefore = configFingerprint();
-        uint256 balBefore = usdc.balanceOf(address(vault));
+        Snap memory before = _snap();
 
         _;
 
-        uint256 balAfter = usdc.balanceOf(address(vault));
-        if (balAfter < balBefore) {
-            uint256 moved = balBefore - balAfter;
+        Snap memory nowSnap = _snap();
+
+        if (nowSnap.vaultBal < before.vaultBal) {
+            uint256 moved = before.vaultBal - nowSnap.vaultBal;
             ghostTotalOut += moved;
-            if (role == ROLE_GUARDIAN) ghostGuardianReducedBalance = true;
-            if (role == ROLE_THIEF) ghostThiefMovedFunds = true;
-        } else if (balAfter > balBefore) {
-            ghostTotalIn += balAfter - balBefore;
+
+            // Every unit that left must have landed on an owner-designated
+            // address. If the sums do not reconcile, something else was paid.
+            if (
+                nowSnap.authorizedBal < before.authorizedBal
+                    || nowSnap.authorizedBal - before.authorizedBal != moved
+            ) {
+                ghostUnauthorizedRecipient = true;
+            }
+        } else if (nowSnap.vaultBal > before.vaultBal) {
+            ghostTotalIn += nowSnap.vaultBal - before.vaultBal;
         }
 
-        if (configFingerprint() != fpBefore) {
+        // Nobody with a mere trigger capability may profit from using it.
+        if (nowSnap.guardianBal > before.guardianBal) ghostGuardianGainedFunds = true;
+        if (nowSnap.thiefBal > before.thiefBal) ghostThiefGainedFunds = true;
+        if (role == ROLE_GUARDIAN && nowSnap.guardianBal > before.guardianBal) {
+            ghostGuardianGainedFunds = true;
+        }
+
+        if (nowSnap.fingerprint != before.fingerprint) {
             if (!mayChangeConfig) {
                 ghostConfigChangedWithoutExecute = true;
                 if (role == ROLE_THIEF) ghostThiefChangedConfig = true;
@@ -380,6 +441,7 @@ contract HeirloomHandler is Test {
 
         vm.startPrank(g);
         try vault.withdraw(amount) {} catch {}
+        // A guardian MAY succeed here since Q11 — and must still gain nothing.
         try vault.claim(bound(tierSeed, 0, 2)) {} catch {}
         try vault.careSpend(g, _category(gSeed), amount) {} catch {}
         vm.stopPrank();
@@ -481,6 +543,38 @@ contract HeirloomHandler is Test {
         vm.prank(thief);
         try vault.execute(id) {
             ghostExecutions++;
+        } catch {}
+    }
+
+    /// @notice The assisted-claim path (Q11): an actor with no role at all
+    ///         triggers the payout so a non-transacting heir still receives.
+    ///         Sometimes the thief tries it, which is the interesting case —
+    ///         they pay the gas and the heir gets the money.
+    function helperTriggersClaim(uint256, uint256 whoSeed, uint256 jitter)
+        external
+        tracked(ROLE_ANY, false, "helperTriggersClaim")
+    {
+        // Land in the claim window first. Without this the helper almost always
+        // meets a non-Claimable vault, the call reverts, and the assisted path
+        // is never actually exercised — the invariants guarding it would pass
+        // while never having seen a successful assisted claim.
+        (,,, uint32 claimable) = vault.ladder();
+        vm.warp(vault.lastActivity() + claimable + bound(jitter, 0, 200 days));
+
+        uint256 tier = vault.activeTier();
+        address helper = whoSeed % 2 == 0 ? randomCaller : thief;
+
+        (address registered,) = vault.beneficiaries(tier);
+        uint256 beforeBal = usdc.balanceOf(registered);
+        uint256 vaultBal = usdc.balanceOf(address(vault));
+
+        vm.prank(helper);
+        try vault.claim(tier) {
+            ghostClaims++;
+            ghostAssistedClaims++;
+            if (usdc.balanceOf(registered) != beforeBal + vaultBal) {
+                ghostClaimPaidWrongAddress = true;
+            }
         } catch {}
     }
 

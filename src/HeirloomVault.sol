@@ -225,10 +225,25 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
     // Claims — INVARIANT 4 and INVARIANT 6
     // =====================================================================
 
-    /// @notice Claim the whole balance for the currently open tier.
+    /// @notice Trigger the payout for the currently open tier. Callable by ANYONE.
     /// @dev Takes an INDEX, never an address: the destination is whatever the
-    ///      owner pre-registered and cannot be influenced by the caller. Only
-    ///      that registered payee may invoke it.
+    ///      owner pre-registered and cannot be influenced by the caller.
+    ///
+    ///      The caller is deliberately unrestricted (docs/OPEN-QUESTIONS.md Q11).
+    ///      Requiring the beneficiary to call it meant an heir who cannot
+    ///      transact — no wallet, no gas, no idea what a blockchain is — could
+    ///      not receive what was left to them, and could silently hold up the
+    ///      cascade for the tiers behind them. That is the precise failure this
+    ///      product exists to prevent.
+    ///
+    ///      This does NOT weaken invariant 4. There is still no destination
+    ///      parameter anywhere on this path: funds go to
+    ///      `_beneficiaries[tier].payee` and nowhere else, whoever calls. A
+    ///      stranger, a thief, or an automated helper can pay the heir; none of
+    ///      them can pay themselves.
+    ///
+    ///      It strengthens invariant 6: reachability no longer depends on the
+    ///      heir being able to send a transaction.
     function claim(uint256 tier) external nonReentrant {
         T.VaultState s = state();
         if (s != T.VaultState.Claimable) revert T.WrongState(s, T.VaultState.Claimable);
@@ -236,7 +251,6 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         if (tier != activeTier()) revert T.TierNotOpen(tier);
 
         address payee = _beneficiaries[tier].payee;
-        if (msg.sender != payee) revert T.NotBeneficiary();
 
         uint256 amount = asset.balanceOf(address(this));
         if (amount == 0) revert T.NothingToClaim();
@@ -245,6 +259,9 @@ contract HeirloomVault is RecoveryModule, ClaimsModule, ReentrancyGuard {
         isClaimed = true;
 
         emit T.Claimed_(tier, payee, amount);
+        emit T.ClaimTriggered(tier, payee, msg.sender, amount);
+
+        // The destination is read from storage, never from calldata.
         asset.safeTransfer(payee, amount);
     }
 

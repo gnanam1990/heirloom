@@ -28,6 +28,20 @@ import {HeirloomTypes as T} from "./HeirloomTypes.sol";
 ///      is no destination parameter anywhere in this module, so a caller has no
 ///      way to name where money goes; it can only ever reach the address the
 ///      owner pre-registered.
+///
+///      Note the beneficiary need NOT be the caller. `claim` is deliberately
+///      callable by anyone (docs/OPEN-QUESTIONS.md Q11) — a stranger, a relayer
+///      or a service acting on a non-crypto heir's behalf can trigger the
+///      payout. Invariant 4 is unaffected by that, because "who may call" and
+///      "where the money goes" are separate questions here and only the second
+///      one is a security property. The destination is read from storage; the
+///      caller cannot name, influence or redirect it, and gains nothing by
+///      triggering it.
+///
+///      That also makes invariant 6 stronger rather than weaker: funds are
+///      reachable even when the registered heir cannot transact at all, so an
+///      heir with no wallet and no gas can no longer strand their own tier —
+///      nor the tiers queued behind them.
 abstract contract ClaimsModule is ConfigGuard {
     bytes32 internal constant KIND_BENEFICIARIES = keccak256("SET_BENEFICIARIES");
 

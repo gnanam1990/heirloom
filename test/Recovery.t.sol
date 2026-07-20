@@ -254,9 +254,13 @@ contract RecoveryTest is Base {
     // -----------------------------------------------------------------
 
     /// @notice Probe every value-moving entry point with a guardian caller.
-    function test_Invariant3_GuardiansCannotMoveFunds() public {
-        _enterClaimable(); // most permissive state for claims
-        uint256 before = usdc.balanceOf(address(vault));
+    /// @dev Since Q11 anyone — guardians included — may TRIGGER a claim, so the
+    ///      property is no longer "a guardian cannot reduce the balance". It is
+    ///      the sharper one: a guardian can never be PAID. Triggering a payout
+    ///      to someone else's registered address is not a guardian power; it is
+    ///      a favour anyone can do, and it costs the doer gas.
+    function test_Invariant3_GuardiansCannotBePaid() public {
+        _enterClaimable();
 
         address[3] memory guardians = [g1, g2, g3];
         for (uint256 i = 0; i < guardians.length; i++) {
@@ -266,16 +270,27 @@ contract RecoveryTest is Base {
             vault.withdraw(1e6);
 
             vm.expectRevert();
-            vault.claim(0);
-
-            vm.expectRevert();
             vault.careSpend(guardians[i], CAT_BILLS, 1e6);
 
             vm.stopPrank();
         }
 
-        assertEq(usdc.balanceOf(address(vault)), before, "a guardian moved funds");
-        assertEq(usdc.balanceOf(g1) + usdc.balanceOf(g2) + usdc.balanceOf(g3), 0, "a guardian received funds");
+        assertEq(usdc.balanceOf(g1) + usdc.balanceOf(g2) + usdc.balanceOf(g3), 0, "a guardian was paid");
+        assertEq(usdc.balanceOf(address(vault)), FUNDED, "the vault balance moved");
+    }
+
+    /// @notice A guardian MAY trigger the heir's claim — and the heir is paid,
+    ///         not the guardian. This is the assisted-claim path working exactly
+    ///         as intended, from the least trusted plausible caller.
+    function test_Invariant3_GuardianTriggeringAClaimPaysTheHeirNotThem() public {
+        _enterClaimable();
+
+        vm.prank(g1);
+        vault.claim(0);
+
+        assertEq(usdc.balanceOf(g1), 0, "the triggering guardian was paid");
+        assertEq(usdc.balanceOf(coldBackup), FUNDED, "the registered heir was not paid");
+        assertEq(usdc.balanceOf(address(vault)), 0);
     }
 
     /// @notice A guardian cannot rotate the vault to themselves and then drain it

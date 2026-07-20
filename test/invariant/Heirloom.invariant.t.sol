@@ -163,12 +163,24 @@ contract HeirloomInvariantTest is Test {
     // INVARIANT 3 — guardians never reduce the balance
     // ===============================================================
 
-    /// @notice Recovery guardians may propose and approve rotations, and that is
-    ///         all. No sequence may end with a guardian-initiated call having
-    ///         reduced the vault balance — including a completed rotation, which
-    ///         changes the lock and moves nothing.
-    function invariant_3_guardiansNeverReduceBalance() public view {
-        assertFalse(handler.ghostGuardianReducedBalance(), "a guardian action reduced the vault balance");
+    /// @notice Recovery guardians may propose and approve rotations, and since
+    ///         Q11 they may also TRIGGER a claim like anyone else. What no
+    ///         sequence may produce is a guardian being PAID — triggering a
+    ///         payout to someone else's registered address costs them gas and
+    ///         earns them nothing.
+    function invariant_3_guardiansAreNeverPaid() public view {
+        assertFalse(handler.ghostGuardianGainedFunds(), "a guardian gained funds");
+    }
+
+    /// @notice The sharper form of the old rule, and the one that actually
+    ///         matters: every unit that leaves the vault lands on an address the
+    ///         OWNER designated — themselves, a registered beneficiary, or a
+    ///         care payee. Never anyone else, under any sequence, whoever called.
+    function invariant_3b_fundsOnlyReachOwnerDesignatedAddresses() public view {
+        assertFalse(
+            handler.ghostUnauthorizedRecipient(),
+            "funds left the vault to an address the owner never designated"
+        );
     }
 
     // ===============================================================
@@ -224,8 +236,12 @@ contract HeirloomInvariantTest is Test {
     // INVARIANT 6 — a no-rights actor is powerless
     // ===============================================================
 
-    function invariant_6_thiefCanNeverMoveFundsOrChangeConfig() public view {
-        assertFalse(handler.ghostThiefMovedFunds(), "an actor with no rights moved funds");
+    /// @notice A no-rights actor may trigger a claim (paying the heir, and the
+    ///         gas) and may execute a matured proposal. Neither earns them
+    ///         anything. What must never happen: the thief gains funds, or
+    ///         applies a config change outside a matured proposal.
+    function invariant_6_thiefNeverProfitsOrChangesConfig() public view {
+        assertFalse(handler.ghostThiefGainedFunds(), "an actor with no rights gained funds");
         assertFalse(handler.ghostThiefChangedConfig(), "an actor with no rights applied a config change");
         assertEq(usdc.balanceOf(thief), 0, "the thief holds funds");
     }
@@ -247,6 +263,7 @@ contract HeirloomInvariantTest is Test {
         console2.log("owner rotations       ", handler.ghostRotations());
         console2.log("care spends           ", handler.ghostCareSpends());
         console2.log("claims completed      ", handler.ghostClaims());
+        console2.log("  of which assisted   ", handler.ghostAssistedClaims());
         console2.log("total in  (6dp)       ", handler.ghostTotalIn());
         console2.log("total out (6dp)       ", handler.ghostTotalOut());
         console2.log("---------------------------------------------------");

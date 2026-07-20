@@ -84,6 +84,44 @@ allowlist can move a single unit at any amount (5,000 runs clean).
 
 ---
 
+## Q11 — ✅ RESOLVED — `claim()` is permissionless (assisted claim)
+
+**Found:** while wiring the off-chain claim flow. `claim()` required
+`msg.sender == beneficiaries[tier].payee`, which meant an heir who could not
+transact — no wallet, no gas, no idea what a blockchain is — could not receive
+what was left to them. Worse, they could sit on an open tier and hold up the
+cascade for the tiers queued behind them. That is precisely the stranding this
+product exists to prevent.
+
+(Recorded here after the fact: this option was originally written up in
+`services/README.md` and `services/src/circle.ts`, not in this file.)
+
+**Resolved by making the CALLER unrestricted while leaving the DESTINATION
+fixed.** Anyone may call `claim(tier)`; funds go to `_beneficiaries[tier].payee`
+and nowhere else. A new `ClaimTriggered(tier, beneficiary, caller, amount)`
+event records who triggered it, alongside the unchanged `Claimed_`.
+
+- **Invariant 4 is untouched.** There is still no destination parameter anywhere
+  on the path. "Who may call" and "where the money goes" are separate questions,
+  and only the second was ever the security property. A stranger, a thief or an
+  automated helper can pay the heir; none of them can pay themselves, and the
+  triggering caller is strictly worse off for the gas.
+- **Invariant 6 gets stronger.** Reachability no longer depends on the heir
+  being able to send a transaction at all.
+- **Invariant 3 needed restating.** "Guardians never reduce the vault balance"
+  became false — a guardian can now trigger a payout to an heir. The true
+  property, now tested, is sharper: a guardian can never be *paid*, and every
+  unit leaving the vault lands on an owner-designated address (the owner, a
+  registered beneficiary, or a care payee) whoever called.
+
+**Tests:** assisted claim by a stranger and by a guardian; a fuzz over arbitrary
+callers asserting the caller is never paid and the registered payee always is;
+queue-jumping and early-claim still rejected; and a `helperTriggersClaim` actor
+in the stateful suite so invariants 4/5/6 are exercised against successful
+assisted claims across random sequences.
+
+---
+
 ## Q4 — 🟡 Does care-mode spending count as a heartbeat?
 
 **Found:** Invariant 1 says *any owner signature* resets the ladder. Care mode is

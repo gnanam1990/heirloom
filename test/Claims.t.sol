@@ -129,15 +129,83 @@ contract ClaimsTest is Base {
         assertEq(usdc.balanceOf(stranger), 0);
     }
 
-    function test_Invariant4_StrangerCannotClaim() public {
+    /// @notice A stranger MAY trigger the payout — and gains nothing by it.
+    ///         This is the assisted-claim path (Q11): who calls and where the
+    ///         money goes are separate questions, and only the second is a
+    ///         security property.
+    function test_Invariant4_StrangerMayTriggerButIsNeverPaid() public {
         _warpIntoTier(0);
+
+        vm.prank(stranger);
+        vault.claim(0);
+
+        assertEq(usdc.balanceOf(stranger), 0, "the caller was paid");
+        assertEq(usdc.balanceOf(coldBackup), FUNDED, "registered payee was not paid");
+        assertEq(usdc.balanceOf(address(vault)), 0);
+    }
+
+    /// @notice The helper pays gas and receives nothing — it is strictly worse
+    ///         off for having helped, which is what makes the path safe to
+    ///         expose to anyone at all.
+    function test_AssistedClaim_CallerGainsNothing() public {
+        _warpIntoTier(0);
+
+        uint256 strangerBefore = usdc.balanceOf(stranger);
+        uint256 heirBefore = usdc.balanceOf(coldBackup);
+
+        vm.prank(stranger);
+        vault.claim(0);
+
+        assertEq(usdc.balanceOf(stranger), strangerBefore, "caller balance changed");
+        assertEq(usdc.balanceOf(coldBackup) - heirBefore, FUNDED, "heir did not receive the full balance");
+    }
+
+    /// @notice Every kind of actor can trigger it, and none of them can be paid.
+    function testFuzz_AssistedClaim_AnyCallerPaysOnlyTheRegisteredPayee(address caller) public {
+        vm.assume(caller != address(0));
+        vm.assume(caller != coldBackup);
+        vm.assume(caller != address(vault));
+        vm.assume(caller.code.length == 0); // EOAs only; a contract may reject the token
+
+        _warpIntoTier(0);
+        uint256 callerBefore = usdc.balanceOf(caller);
+
+        vm.prank(caller);
+        vault.claim(0);
+
+        assertEq(usdc.balanceOf(caller), callerBefore, "an arbitrary caller was paid");
+        assertEq(usdc.balanceOf(coldBackup), FUNDED, "registered payee was not paid");
+    }
+
+    function test_AssistedClaim_EmitsClaimTriggeredWithBothParties() public {
+        _warpIntoTier(0);
+        vm.expectEmit(true, true, true, true);
+        emit T.ClaimTriggered(0, coldBackup, stranger, FUNDED);
+        vm.prank(stranger);
+        vault.claim(0);
+    }
+
+    /// @notice A helper still cannot open a tier that is not open, so assisted
+    ///         claiming cannot be used to jump the cascade order.
+    function test_AssistedClaim_CannotJumpTheQueue() public {
+        _warpIntoTier(0);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(T.TierNotOpen.selector, uint256(1)));
+        vault.claim(1);
+        assertEq(usdc.balanceOf(spouse), 0);
+    }
+
+    /// @notice Nor before the vault is claimable at all.
+    function test_AssistedClaim_CannotClaimEarly() public {
+        _silenceFor(CLAIMABLE - 1);
         vm.prank(stranger);
         vm.expectRevert();
         vault.claim(0);
-        assertEq(usdc.balanceOf(stranger), 0, "an unregistered address was paid");
+        assertEq(usdc.balanceOf(address(vault)), FUNDED);
     }
 
-    /// @notice Even the correct payee for the WRONG tier cannot pull funds.
+    /// @notice Even the registered payee of a CLOSED tier cannot pull funds —
+    ///         the gate is which tier is open, not who is asking.
     function test_Invariant4_PayeeOfInactiveTierCannotClaim() public {
         _warpIntoTier(0);
         vm.prank(charity);

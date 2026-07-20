@@ -78,7 +78,6 @@ library HeirloomTypes {
 
     error NotOwner();
     error NotGuardian();
-    error NotBeneficiary();
     error NotCareGuardian();
     error ZeroAddress();
     error LadderNotMonotonic();
@@ -114,6 +113,14 @@ library HeirloomTypes {
     event RotationApproved(uint256 indexed id, address indexed guardian, uint256 approvals);
     event OwnerRotated(address indexed from, address indexed to);
     event Claimed_(uint256 indexed tier, address indexed payee, uint256 amount);
+    /// @notice Emitted alongside `Claimed_` to record WHO triggered a claim, which
+    ///         may be anyone. The `beneficiary` is the only address that receives
+    ///         funds; `caller` receives nothing and cannot influence the
+    ///         destination. Separate from `Claimed_` so existing indexers that
+    ///         only care about the payout keep working unchanged.
+    event ClaimTriggered(
+        uint256 indexed tier, address indexed beneficiary, address indexed caller, uint256 amount
+    );
     event CareSpend(
         address indexed guardian, address indexed payee, bytes32 indexed category, uint256 amount
     );

@@ -44,6 +44,7 @@ has its own address by design.
 | Ladder | 90 / 180 / 270 / 365 days |
 | Config timelock | `604800` s (7 days) |
 | Guardians | 3, threshold 2-of-3 |
+| Funded | 3.000000 USDC — [`0x9801d162…7cc9f45c`](https://testnet.arcscan.app/tx/0x9801d162c5e37b73720770e3652fb9139041e77705e84644019c51217cc9f45c) |
 
 ### 2. Demo vault — **DEMO-ONLY, short durations**
 
@@ -60,6 +61,18 @@ has its own address by design.
 | Source verified | ✅ on testnet.arcscan.app |
 | Ladder | **60 / 120 / 180 / 240 seconds** |
 | Claim windows | tier 0: 180 s · tier 1: 120 s · tier 2: terminal |
+
+### 3. Service-proof vault — **DEMO-ONLY, already claimed**
+
+Deployed solely to prove the off-chain assisted-claim flow end to end. Now
+`Claimed` and empty; kept for the receipt.
+
+| Field | Value |
+|---|---|
+| Address | [`0x31eEfc46C61678eBAE2650FC2bF8F3312eebC754`](https://testnet.arcscan.app/address/0x31eEfc46C61678eBAE2650FC2bF8F3312eebC754) |
+| Assisted claim tx | [`0x41d32de3…7d8c27b9`](https://testnet.arcscan.app/tx/0x41d32de3484002e1e4bf393d789afa8094fed28cd92cb330f64eeb437d8c27b9) |
+| Triggered by | the **service**, via `POST /claim/:token/receive` |
+| Result | heir `0x58003426…` +1.500000 USDC · helper −1578 gas · vault 0 |
 
 ### Superseded — pre-Q11, do not use
 
@@ -166,8 +179,8 @@ Reproduce with `script/arc-demo-lifecycle.sh` (needs a funded `.env`).
 |---|---|
 | Deployer funded with | 20.000000 USDC |
 | Balance after original run | 11.322577 USDC |
-| Balance after Q11 redeploy | 9.142928 USDC |
-| **Total spent** | **10.857072 USDC** |
+| Balance after Q11 redeploy | 4.549071 USDC |
+| **Total spent** | **15.450929 USDC** — mostly principal that reached heirs, not gas |
 
 Of which ~8.0 USDC is *not* gas — 5 USDC sits in the production vault, 3 USDC
 went through the demo vault (1 to the care payee, 2 to the heir), and 0.4 USDC

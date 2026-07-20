@@ -86,7 +86,7 @@ export const chain = {
 /** Vaults to watch. Defaults to the deployed pair from docs/addresses.md. */
 export const watchedVaults: readonly `0x${string}`[] = optional(
   'HEIRLOOM_VAULTS',
-  '0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8,0x12dbb68F3c68BD47BF9799db7112f03ac37f6042',
+  '0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA,0x0D884E62B1dE894df1651910849E534aDf4deaDa',
 )
   .split(',')
   .map((s) => s.trim().toLowerCase())
@@ -103,7 +103,7 @@ export const indexer = {
   pageSize: Number(optional('INDEXER_PAGE_SIZE', '2000')),
   pollMs: Number(optional('INDEXER_POLL_MS', '5000')),
   /** Where to start if there is no stored cursor. 0 = deployment scan from genesis. */
-  startBlock: BigInt(optional('INDEXER_START_BLOCK', '52719229')),
+  startBlock: BigInt(optional('INDEXER_START_BLOCK', '52730264')),
   dbPath: optional('INDEXER_DB', resolve(ROOT, 'heirloom-index.json')),
 };
 
@@ -125,6 +125,20 @@ export const secrets = {
       'TELEGRAM_BOT_TOKEN',
       'the Telegram /alive bot',
       'message @BotFather on Telegram, /newbot, copy the token',
+    ),
+
+  /**
+   * Key used ONLY to trigger assisted claims. Deliberately separate from any
+   * owner key. Per HeirloomVault.sol:253 it cannot name a destination, so the
+   * worst a thief could do with it is pay gas to send an heir their own
+   * inheritance. Generate a throwaway: `cast wallet new`, fund it with a little
+   * Arc testnet USDC for gas.
+   */
+  helperPrivateKey: () =>
+    required(
+      'HELPER_PRIVATE_KEY',
+      'triggering assisted claims on an heir\'s behalf',
+      'cast wallet new, then fund it with a small amount of Arc testnet USDC for gas',
     ),
 
   circleApiKey: () =>
@@ -163,6 +177,7 @@ export function credentialStatus(): Record<string, boolean> {
   return {
     claimLinks: ok(secrets.claimLinkSecret),
     telegramBot: ok(secrets.telegramBotToken),
+    assistedClaimRelayer: ok(secrets.helperPrivateKey),
     circleWallets: ok(secrets.circleApiKey) && ok(secrets.circleEntitySecret),
     email: ok(secrets.smtp),
   };

@@ -3,10 +3,16 @@
 > ⚠️ **UNAUDITED TESTNET CODE.** Local development only. Not hardened for
 > hosting: no auth on admin routes, no rate limiting, no TLS.
 
-The thin observation layer from PRD §5. The chain is the source of truth;
-**nothing here custodies anything.** This service holds no private key, has no
-signing path, and cannot move funds. If it were fully compromised, the worst an
-attacker could do is send a Telegram message asking someone to sign a heartbeat.
+The thin observation layer from PRD §5. The chain is the source of truth.
+
+**Custody, stated precisely.** This service holds no key that can take anything.
+It never holds an owner key, and the Telegram bot has no signing path at all.
+Since Q11 it *may* hold one optional key — `HELPER_PRIVATE_KEY` — used solely to
+trigger `claim(tier)` on an heir's behalf. That key cannot name a destination,
+claim early, jump the cascade order, touch config, or pay itself: the contract
+reads the payee from storage. Worst case if this whole service is compromised,
+an attacker can send a Telegram message asking someone to sign a heartbeat, and
+pay gas to send an heir their own inheritance slightly early.
 
 ## What's here
 
@@ -18,7 +24,8 @@ attacker could do is send a Telegram message asking someone to sign a heartbeat.
 | Off-chain ladder mirror | `src/ladder.ts` | ✅ tested |
 | Claim-link signing | `src/claims.ts` | ✅ tested |
 | Telegram `/alive` bot | `src/telegram.ts` | ⏸ needs `TELEGRAM_BOT_TOKEN` |
-| Circle heir wallets | `src/circle.ts` | ⛔ needs credentials **and** a decision — see below |
+| Assisted-claim relayer | `src/relayer.ts` | ⏸ needs `HELPER_PRIVATE_KEY` |
+| Circle heir wallets | `src/circle.ts` | ⛔ needs credentials **and** a setup-time flow — see below |
 
 ## Run it
 
@@ -35,8 +42,8 @@ public Arc testnet RPC out of the box.
 ```
 curl localhost:8787/health
 curl localhost:8787/vaults
-curl localhost:8787/vault/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8/state
-curl localhost:8787/vault/0xaef39a00cdd1d9b240bde4e08f7b6f9915a386e8/events
+curl localhost:8787/vault/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA/state
+curl localhost:8787/vault/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA/events
 ```
 
 `/health` reports exactly which credentialed features are live.
@@ -50,6 +57,7 @@ feature degrades to **disabled and loudly logged**, never to a stub.
 |---|---|---|
 | `CLAIM_LINK_SECRET` | signing claim links | you: `openssl rand -hex 32` |
 | `TELEGRAM_BOT_TOKEN` | the `/alive` bot | @BotFather on Telegram |
+| `HELPER_PRIVATE_KEY` | triggering assisted claims | `cast wallet new`, fund with a little Arc testnet USDC |
 | `CIRCLE_API_KEY` | heir wallet creation | console.circle.com, testnet key |
 | `CIRCLE_ENTITY_SECRET` | Circle wallet operations | console.circle.com |
 | `SMTP_*` | emailing claim links | any SMTP provider |
@@ -96,50 +104,78 @@ service layer should introduce.
 
 A claim link is a signed capability to **see** a claim page — not a bearer token
 for the money. The contract pays `beneficiaries[tier].payee` regardless of
-anything in the link (`HeirloomVault.sol:219`), so a forwarded email or a leaked
+anything in the link (`HeirloomVault.sol:253`), so a forwarded email or a leaked
 URL is not a theft. Links are HMAC-signed and time-boxed (30 days).
 
-## ⛔ Before Circle Wallets can be wired: a sequencing problem
+## The claim flow, after Q11
 
-The PRD imagines *"heir clicks link → wallet is created → funds land."* **That
-cannot work against the deployed contract.**
+`claim(tier)` is now callable by **anyone**, with funds still going only to the
+pre-registered beneficiary. That removed the heir's need for gas, a wallet app,
+or the ability to transact at all — the service triggers the payout for them.
 
-`claim()` reverts with `NotBeneficiary` unless `msg.sender` is the address the
-owner **pre-registered**. A wallet created at claim time has a fresh address
-that was never registered, so its claim always reverts.
+**Proven end to end on Arc testnet** against vault
+`0x31eEfc46C61678eBAE2650FC2bF8F3312eebC754`: the heir opened a claim link,
+pressed *Receive my funds*, and the service (as helper) called `claim(0)`.
 
-Two ways forward:
+```
+heir   0x58003426…  4098566 -> 5598566   gained 1.500000 USDC
+helper 0x07bB7a1D…    94800 ->   93222   LOST 1578 to gas, gained nothing
+vault                1500000 ->       0   state Claimed
+```
 
-**(A) Provision at setup — works with the contract as deployed.**
-When the owner configures heirs, create an email-bound Circle Wallet per heir
-*then*, and register those addresses as beneficiaries through the normal 7-day
-config timelock. At claim time the heir signs into a wallet that already exists
-and already is the registered payee. Still a no-seed-phrase experience.
+Receipt: [`0x41d32de3…7d8c27b9`](https://testnet.arcscan.app/tx/0x41d32de3484002e1e4bf393d789afa8094fed28cd92cb330f64eeb437d8c27b9)
 
-**(B) Permissionless assisted claim — needs a contract change.**
-Let anyone call `claim(tier)` while funds still go only to the registered payee.
-Invariant 4 is untouched (the caller still cannot name a destination) and
-invariant 6 gets *stronger*, since an heir who can never transact cannot strand
-their tier. Already flagged as a possible strengthening in
-`docs/OPEN-QUESTIONS.md`.
+Routes: `GET /claim/:token` renders the page; `POST /claim/:token/receive`
+triggers it. Both are safe to expose to whoever holds the link, because the link
+is not a bearer token for the money — the destination is fixed in contract
+storage.
 
-`src/circle.ts` implements the client for (A). (B) is a contract decision.
+### ⛔ What Q11 did NOT solve, and why Circle is still inert
 
-Also unresolved: an heir's fresh wallet needs Arc gas to send the claim, and on
-Arc gas is USDC. Either Circle sponsors it or something pre-funds the wallet —
-`estimateGasFundingNeeded()` makes the requirement explicit rather than letting
-it surface as a failed claim at the worst possible moment.
+Q11 fixed *who can call*. It did **not** change *where the money goes*: the
+destination is still `_beneficiaries[tier].payee`, read from storage
+(`HeirloomVault.sol:253`) and fixed when the owner registers heirs.
+
+**So a Circle Wallet created at claim time still cannot receive the funds.** Its
+address was never registered, so the payout goes to whatever the owner recorded.
+The naive flow — *heir clicks link → wallet created → funds land in it* — would
+pay the wrong address silently rather than erroring. It remains impossible, and
+that is a property worth keeping: it is the same rule that stops a thief
+redirecting an inheritance.
+
+The flow that works:
+
+**At setup** (owner alive) — owner supplies each heir's email; we create an
+email-bound Circle Wallet per heir *then*; the owner registers those addresses
+as beneficiaries through the usual 7-day config timelock.
+
+**At claim** (owner gone) — heir opens the link, presses one button, the service
+triggers `claim(tier)`, and funds land in the wallet already registered for
+them. The heir authenticates by email to see and move it.
+
+The heir still never sees a seed phrase, needs no crypto knowledge, and now
+needs no gas either. The one hard requirement is that heirs are set up with
+wallets *in advance* — inherent to a product whose premise is "configure this
+before you need it".
+
+`src/circle.ts` implements the client for that and stays inert until credentials
+exist. Before wiring it, confirm Circle can hand back an address at setup time;
+if an address only exists after the heir first authenticates, this design needs
+rethinking.
 
 ## Tests
 
 ```
-npm test        # 35 tests, no credentials required
+npm test        # 40 tests, no credentials required
 npm run typecheck
 ```
 
 Covers event ordering under shared timestamps, cursor semantics, block paging,
 the ladder mirror against the same boundaries as the Foundry suite, 6dp money
-formatting, and claim-link signing/tampering/expiry.
+formatting, claim-link signing/tampering/expiry, and the relayer's credential
+gate. The relayer tests are hermetic — they set placeholder credentials before
+importing config, so they behave identically on a clean checkout and on a
+machine with a real `.env`.
 
 The ladder mirror is cross-checked at runtime too: `readVault` reads `state()`
 from the contract *and* recomputes it locally, and logs `MIRROR DRIFT` if they

@@ -21,6 +21,7 @@ import {
 import * as telegram from './telegram.js';
 import {mintClaimLink, verifyClaimToken} from './claims.js';
 import * as circle from './circle.js';
+import * as relayer from './relayer.js';
 
 const ix = new Indexer();
 
@@ -108,6 +109,26 @@ function claimPage(res: ServerResponse, token: string): void {
   const snap = ix.snapshot(v.claims.vault);
   const amount = snap ? formatUsdc(snap.totalAssets) : 'unknown';
   const claimable = snap?.state === VaultState.Claimable;
+  const alreadyClaimed = snap?.state === VaultState.Claimed;
+  const canTrigger = claimable && relayer.isConfigured();
+
+  const action = alreadyClaimed
+    ? '<p><strong>This has already been received.</strong></p>'
+    : !claimable
+      ? `<p>Not available yet — the vault is <strong>${
+          snap ? STATE_NAMES[snap.state] : 'unknown'
+        }</strong>. You will be emailed when it is.</p>`
+      : canTrigger
+        ? `<form method="POST" action="/claim/${token}/receive">
+             <button type="submit" style="font-size:1.1rem;padding:.8rem 1.6rem;cursor:pointer">
+               Receive my funds
+             </button>
+           </form>
+           <p style="color:#666;font-size:.9rem">You will not be asked to pay anything,
+           install anything, or approve a transaction. We send it for you.</p>`
+        : `<p style="color:#666">The receive step needs a helper key
+           (<code>HELPER_PRIVATE_KEY</code>), which is not provisioned here, so the
+           button is disabled rather than pretending to work.</p>`;
 
   html(
     res,
@@ -119,16 +140,59 @@ function claimPage(res: ServerResponse, token: string): void {
 <p>Amount: <strong>${amount} USDC</strong></p>
 <p>It can only ever be sent to the account already recorded for you:<br>
 <code>${v.claims.payee}</code></p>
-<p>Status: <strong>${snap ? STATE_NAMES[snap.state] : 'unknown'}</strong>${
-      claimable ? '' : ' — not claimable yet.'
-    }</p>
+${action}
 <hr>
-<p style="color:#666">The next step creates or unlocks your account and completes the
-transfer. That flow needs Circle Wallets credentials, which are not provisioned
-in this environment yet, so it is disabled rather than pretending to work.</p>
 <p style="color:#666">Testnet only. Unaudited software.</p>
 </body>`,
   );
+}
+
+/**
+ * POST /claim/:token/receive — the assisted claim (Q11).
+ *
+ * The service pays the gas and triggers the payout. It cannot redirect the
+ * funds: `claim` takes a tier index and the contract reads the payee from
+ * storage, so this endpoint is safe to expose to whoever holds the link.
+ */
+async function claimExecute(res: ServerResponse, token: string): Promise<void> {
+  let secret: string;
+  try {
+    secret = secrets.claimLinkSecret();
+  } catch (err) {
+    json(res, 503, {error: (err as Error).message});
+    return;
+  }
+
+  const v = verifyClaimToken(token, secret);
+  if (!v.ok) {
+    json(res, 400, {error: `claim link ${v.reason}`});
+    return;
+  }
+
+  try {
+    const result = await relayer.triggerClaim(
+      v.claims.vault as `0x${string}`,
+      v.claims.tier,
+    );
+    await ix.refreshStates();
+    html(
+      res,
+      200,
+      `<!doctype html><meta charset="utf-8">
+<title>Received</title>
+<body style="font-family:system-ui;max-width:38rem;margin:4rem auto;padding:0 1rem;line-height:1.6">
+<h1>It's yours</h1>
+<p><strong>${formatUsdc(result.amount)} USDC</strong> has been sent to your account:<br>
+<code>${result.beneficiary}</code></p>
+<p>Receipt: <a href="${result.explorer}">${result.txHash}</a></p>
+<hr>
+<p style="color:#666">Nothing was taken from you and nothing was charged.
+Testnet only. Unaudited software.</p>
+</body>`,
+    );
+  } catch (err) {
+    json(res, 503, {error: (err as Error).message});
+  }
 }
 
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -169,6 +233,12 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
   const ev = p.match(/^\/vault\/(0x[a-fA-F0-9]{40})\/events$/);
   if (ev && ev[1]) {
     json(res, 200, ix.store.recentFor(ev[1]));
+    return;
+  }
+
+  const exec = p.match(/^\/claim\/(.+)\/receive$/);
+  if (exec && exec[1] && req.method === 'POST') {
+    await claimExecute(res, exec[1]);
     return;
   }
 
@@ -255,7 +325,12 @@ async function runBot(): Promise<void> {
 const creds = credentialStatus();
 console.log('Heirloom services — UNAUDITED TESTNET CODE');
 console.log('credentials:', creds);
-if (!creds.circleWallets) console.log('[circle] disabled —', 'no CIRCLE_API_KEY/CIRCLE_ENTITY_SECRET');
+if (!creds.circleWallets) console.log('[circle] disabled — no CIRCLE_API_KEY/CIRCLE_ENTITY_SECRET');
+if (!creds.assistedClaimRelayer) {
+  console.log('[relayer] disabled — no HELPER_PRIVATE_KEY; the receive button will be inert');
+} else {
+  console.log('[relayer] assisted claims enabled, helper', relayer.helperAddress());
+}
 void circle.isConfigured();
 
 await ix.refreshStates();

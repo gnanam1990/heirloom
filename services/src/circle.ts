@@ -7,40 +7,50 @@
  * provisioned. Nothing here fakes a wallet, a balance, or a transaction.
  * ======================================================================
  *
- * There is also a SEQUENCING CONSTRAINT that has to be understood before this
- * gets wired, because the obvious design does not work:
+ * ===================== READ THIS BEFORE WIRING IT =====================
+ * Q11 (permissionless claim) solved HALF of the heir-onboarding problem, and
+ * it is important not to mistake it for the whole thing.
  *
- *   The PRD imagines "heir clicks link -> wallet is created -> funds land".
- *   That cannot work against the deployed contract. `claim()` reverts with
- *   NotBeneficiary unless msg.sender is the address the OWNER pre-registered
- *   (HeirloomVault.sol:219). A wallet created at claim time has a fresh
- *   address that was never registered, so its claim always reverts.
+ *   SOLVED by Q11:   the heir no longer needs gas, a wallet app, or the ability
+ *                    to send a transaction. A helper triggers `claim(tier)` for
+ *                    them (see relayer.ts).
  *
- * Two ways to resolve it:
+ *   NOT SOLVED:      the DESTINATION is still `_beneficiaries[tier].payee`,
+ *                    read from storage at HeirloomVault.sol:253. It is fixed
+ *                    when the owner registers heirs, and no caller can change
+ *                    it — that is exactly what keeps invariant 4 true.
  *
- *   (A) PROVISION AT SETUP  — works with the contract as deployed.
- *       When the owner configures heirs, we create an email-bound Circle Wallet
- *       per heir THEN, and the owner registers those addresses as beneficiaries
- *       (through the 7-day config timelock, like any other config change). At
- *       claim time the heir authenticates to a wallet that already exists and
- *       already is the registered payee. The email link becomes "sign in and
- *       press claim", which is still the non-crypto experience the PRD wants.
+ * So a Circle Wallet created AT CLAIM TIME still cannot receive the funds. Its
+ * address was never registered, so the payout goes to whatever address the
+ * owner recorded, not to the shiny new wallet. The naive flow "heir clicks
+ * link -> wallet created -> funds land in it" remains impossible, and would
+ * silently pay the wrong address rather than erroring.
  *
- *   (B) PERMISSIONLESS ASSISTED CLAIM — needs a contract change.
- *       Let anyone call `claim(tier)` while funds still go only to the
- *       registered payee. Invariant 4 is untouched (the destination remains
- *       un-nameable by the caller) and invariant 6 gets stronger, because an
- *       heir who never manages to transact cannot strand the tier. This was
- *       already flagged as a possible strengthening in docs/OPEN-QUESTIONS.md.
+ * The flow that DOES work, and which this module is written for:
  *
- * This module implements the client for (A). (B) is a contract decision, not
- * one this service should make unilaterally.
+ *   AT SETUP  (owner is alive, configuring the vault)
+ *     1. Owner supplies each heir's EMAIL.
+ *     2. We create an email-bound Circle Wallet per heir now, and hand back the
+ *        addresses.
+ *     3. Owner registers those addresses as beneficiaries, through the normal
+ *        7-day config timelock like any other config change.
  *
- * A second constraint, easy to miss: the heir's wallet needs Arc gas to send
- * the claim transaction. On Arc gas is USDC and a fresh wallet has none. Either
- * the wallet is gas-sponsored, or something pre-funds it with a small amount.
- * `estimateGasFundingNeeded` exists to make that requirement explicit rather
- * than discovering it when a grieving spouse's claim fails.
+ *   AT CLAIM  (owner is gone, vault is Claimable)
+ *     4. Heir opens the emailed link.
+ *     5. The service, as helper, calls `claim(tier)` — no gas or wallet needed
+ *        from the heir (this is the Q11 win).
+ *     6. Funds land in the wallet that was already registered for them.
+ *     7. Heir authenticates to that wallet by email to see and move the money.
+ *
+ * The heir still never sees a seed phrase, still needs no crypto knowledge, and
+ * now also needs no gas. The one hard requirement is that the owner set their
+ * heirs up with wallets in advance — which is inherent to a product whose whole
+ * premise is "configure this before you need it".
+ * ======================================================================
+ *
+ * A second constraint that survives Q11 only partially: the heir's wallet needs
+ * gas ONLY if the heir later wants to move the funds themselves. Receiving is
+ * free. `estimateGasFundingNeeded` is kept for that case.
  */
 import {secrets} from './config.js';
 
@@ -74,7 +84,9 @@ function authHeaders(): Record<string, string> {
  * Creates an email-bound wallet for an heir on Arc testnet.
  *
  * MUST be called at SETUP time, not claim time — see the header. The returned
- * address is what the owner registers as a beneficiary.
+ * address is what the owner registers as a beneficiary, and registering it goes
+ * through the 7-day config timelock. Calling this at claim time produces an
+ * address that can never receive the payout.
  *
  * @throws MissingCredentialError until Circle credentials are provisioned.
  */
@@ -123,8 +135,11 @@ Circle Programmable Wallets — what must be provisioned:
 
 Also confirm before wiring:
   - Which blockchain identifier Circle uses for Arc testnet.
-  - Whether gas sponsorship is available there, or whether heir wallets must be
-    pre-funded (see estimateGasFundingNeeded).
-  - That wallets can be created at SETUP time and their addresses handed back,
-    since the beneficiary address must be registered on-chain in advance.
+  - That a wallet address can be obtained at SETUP time and handed back, since
+    the beneficiary address must be registered on-chain in advance. This is the
+    load-bearing requirement: if Circle cannot give an address until the heir
+    first authenticates, the whole email-onboarding design needs rethinking.
+  - How an heir authenticates to a wallet created for them months earlier.
+  - Gas sponsorship is NOT needed to receive (Q11 covers that via the relayer),
+    only if the heir later moves funds themselves.
 `.trim();

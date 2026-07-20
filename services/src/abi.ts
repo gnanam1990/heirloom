@@ -1,6 +1,6 @@
 /**
  * Vault ABI subset — generated from out/HeirloomVault.sol/HeirloomVault.json
- * for the deployed build. Events + the views the indexer reads + heartbeat().
+ * for the deployed (post-Q11) build. Events + indexer views + heartbeat + claim.
  */
 export const vaultAbi = [
   {
@@ -97,6 +97,19 @@ export const vaultAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claim",
+    "inputs": [
+      {
+        "name": "tier",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -390,6 +403,37 @@ export const vaultAbi = [
         "type": "bytes32",
         "indexed": true,
         "internalType": "bytes32"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ClaimTriggered",
+    "inputs": [
+      {
+        "name": "tier",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "beneficiary",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "caller",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
         "name": "amount",

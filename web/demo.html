@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heirloom — simulated vault walkthrough</title>
+<meta name="description" content="Walk the full Heirloom lifecycle in your browser — nag, guardian alert, care mode, recovery, cascade and claim. No wallet, no chain. Logic mirrored from the Foundry suite.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --vault:#0E1B16; --panel:#142219; --line:#24382C;
+    --brass:#C8A24B; --brass-dim:#8a7136;
+    --ivory:#EFEAD8; --faded:#8FA294; --alert:#C96A4A;
+    --ok:#7FA87A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--vault);color:var(--ivory);font-family:'Sora',sans-serif;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:var(--brass);text-decoration:none}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+
+  header{display:flex;justify-content:space-between;align-items:center;padding:28px 0}
+  .mark{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.5rem;letter-spacing:.12em;text-transform:uppercase}
+  .mark .key{color:var(--brass)}
+  nav a{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded);margin-left:28px}
+  nav a:hover{color:var(--brass)}
+
+  .btn{display:inline-block;padding:11px 20px;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--brass);color:var(--brass);background:transparent;cursor:pointer;font-family:'Sora',sans-serif;transition:background .2s,color .2s}
+  .btn.solid{background:var(--brass);color:var(--vault);font-weight:600}
+  .btn:hover:not(:disabled){background:var(--brass);color:var(--vault)}
+  .btn.solid:hover{background:var(--ivory);border-color:var(--ivory)}
+  .btn:disabled{opacity:.32;cursor:not-allowed}
+  .btn.danger{border-color:var(--alert);color:var(--alert)}
+  .btn.danger:hover:not(:disabled){background:var(--alert);color:var(--vault)}
+
+  /* intro */
+  .intro{padding:44px 0 30px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);margin-bottom:18px}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(2.1rem,4.6vw,3.2rem);line-height:1.08;max-width:20ch}
+  h1 em{font-style:italic;color:var(--brass)}
+  .intro p.sub{max-width:60ch;margin-top:16px;color:var(--faded);font-size:1rem}
+
+  .sim-label{margin-top:24px;border:1px solid var(--brass-dim);background:rgba(200,162,75,.07);padding:14px 18px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--ivory);line-height:1.65}
+  .sim-label b{color:var(--brass);font-weight:500}
+
+  section{padding:40px 0;border-bottom:1px solid var(--line)}
+  h2{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(1.5rem,2.8vw,2rem);margin-bottom:6px}
+  .step-n{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);display:block;margin-bottom:8px}
+  .lede{color:var(--faded);max-width:62ch;margin-bottom:24px;font-size:.94rem}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+  @media(max-width:860px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--vault);padding:22px}
+  .col h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.15rem;margin-bottom:12px}
+
+  label.fld{display:block;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded);margin:14px 0 6px}
+  select,input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--ivory);padding:9px 11px;font-family:'IBM Plex Mono',monospace;font-size:.82rem}
+
+  .tier-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-family:'IBM Plex Mono',monospace;font-size:.8rem}
+  .tier-row:last-child{border-bottom:none}
+  .tier-badge{width:22px;height:22px;flex:0 0 22px;border:1px solid var(--brass);color:var(--brass);display:grid;place-items:center;font-size:.7rem}
+  .tier-row .who{flex:1}
+  .tier-row .win{color:var(--faded);font-size:.72rem}
+  .tier-row.open{background:rgba(200,162,75,.09)}
+  .tier-row.open .tier-badge{background:var(--brass);color:var(--vault)}
+  .tier-row.done{opacity:.4}
+
+  /* console */
+  .console{background:var(--panel);border:1px solid var(--line);padding:24px}
+  .state-head{display:flex;align-items:center;gap:12px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faded)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--brass);animation:beat 1.6s infinite}
+  .dot.warn{background:var(--alert)}
+  @keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+  .state-name{font-family:'Cormorant Garamond',serif;font-size:2.4rem;margin:10px 0 2px;line-height:1.1}
+  .state-name.warn{color:var(--alert)}
+  .state-name.done{color:var(--ok)}
+  .state-sub{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--faded);min-height:2.6em}
+
+  .balance{font-family:'IBM Plex Mono',monospace;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:.84rem}
+  .balance .amt{color:var(--brass);font-size:1.05rem}
+  .balance .dp{color:var(--faded);font-size:.7rem}
+
+  /* ladder viz */
+  .viz{margin-top:20px}
+  .viz-track{display:flex;gap:2px;height:8px;margin-bottom:6px}
+  .viz-seg{flex:1;background:var(--line);position:relative}
+  .viz-seg.on{background:var(--brass)}
+  .viz-seg.warn{background:var(--alert)}
+  .viz-marks{display:flex;font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--faded);letter-spacing:.06em}
+  .viz-marks span{flex:1}
+  .viz-marks span.cur{color:var(--brass)}
+
+  input[type=range]{width:100%;margin:16px 0 6px;accent-color:var(--brass);background:transparent}
+  .clock{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--faded);flex-wrap:wrap;gap:6px}
+  .clock b{color:var(--ivory);font-weight:500}
+  .ctrl-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+
+  /* action panels */
+  .act{background:var(--vault);border:1px solid var(--line);padding:20px;margin-top:1px}
+  .act.locked{opacity:.45}
+  .act h3{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:1.2rem;margin-bottom:4px}
+  .act .why{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--faded);margin-bottom:12px}
+  .act p{font-size:.88rem;color:var(--faded);margin-bottom:12px}
+  .kv{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--faded);display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted var(--line)}
+  .kv b{color:var(--ivory);font-weight:500}
+  .kv.bad b{color:var(--alert)}
+  .kv.good b{color:var(--ok)}
+
+  .note-out{font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-height:1.7;background:var(--panel);border:1px solid var(--brass-dim);padding:16px;margin-top:12px;white-space:pre-wrap;word-break:break-word}
+  .note-out.sealed{color:var(--faded)}
+  .note-out.open{color:var(--ivory)}
+
+  /* log */
+  .log{background:#0B1612;border:1px solid var(--line);padding:16px;height:230px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:.74rem;line-height:1.75}
+  .log div{border-bottom:1px solid rgba(36,56,44,.5);padding:3px 0;color:var(--faded)}
+  .log div b{color:var(--brass);font-weight:500}
+  .log div.rev b{color:var(--alert)}
+  .log div.win b{color:var(--ok)}
+  .log .ts{color:#54655B;margin-right:8px}
+
+  .cite{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#54655B;margin-top:10px;line-height:1.7}
+  .cite a{color:#6b7f72}
+  .cite a:hover{color:var(--brass)}
+
+  footer{padding:40px 0 60px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:18px;color:var(--faded);font-size:.78rem}
+  footer .foot-mark{font-family:'IBM Plex Mono',monospace;letter-spacing:.16em;text-transform:uppercase}
+  footer .warn{color:var(--alert)}
+
+  @media (prefers-reduced-motion: reduce){
+    .dot{animation:none}
+    html{scroll-behavior:auto}
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark"><a href="/" style="color:inherit">Heir<span class="key">loom</span></a></div>
+    <nav aria-label="Main">
+      <a href="/#ladder">Mechanism</a>
+      <a href="/#covers">Coverage</a>
+      <a href="https://github.com/gnanam1990/heirloom">GitHub</a>
+    </nav>
+  </header>
+
+  <section class="intro">
+    <p class="eyebrow">Interactive walkthrough</p>
+    <h1>Watch the money <em>find its way home.</em></h1>
+    <p class="sub">A full vault lifetime in one screen — silence, escalation, care, recovery, theft and inheritance. Drag the clock forward and see exactly what the contracts would do.</p>
+
+    <div class="sim-label" role="note">
+      <b>Simulated walkthrough</b> — logic mirrored from the Foundry test suite (96 tests).
+      Live Arc-testnet version coming. No wallet, no chain, no real funds: every number here is
+      make-believe, but every rule is the one the contracts actually enforce.
+    </div>
+  </section>
+
+  <!-- ============ STEP 1 : CREATE ============ -->
+  <section>
+    <span class="step-n">Step 1 — Create the vault</span>
+    <h2>Who inherits, and who can help</h2>
+    <p class="lede">Beneficiaries are ordered. Each tier gets a claim window; if it lapses, the next tier opens. The last tier never expires — that is what stops funds dead-ending. Guardians can propose a new key, and nothing else.</p>
+
+    <div class="cols">
+      <div class="col">
+        <h3>Cascading beneficiaries</h3>
+        <div id="tierList"></div>
+        <label class="fld" for="famName">Tier 2 — family / spouse name</label>
+        <input type="text" id="famName" value="Priya (spouse)" maxlength="26">
+        <p class="cite">Windows mirror <b>script/DeployHeirloom.s.sol:58–61</b> — 30d, 60d, terminal.</p>
+      </div>
+      <div class="col">
+        <h3>Guardians (M-of-N)</h3>
+        <label class="fld" for="thresh">Approval threshold</label>
+        <select id="thresh">
+          <option value="2" selected>2 of 3 — recommended</option>
+          <option value="1">1 of 3 — weakest</option>
+          <option value="3">3 of 3 — strictest</option>
+        </select>
+        <div id="guardList" style="margin-top:14px"></div>
+        <label class="fld">Starting balance</label>
+        <div class="balance" style="border-top:none;padding-top:0">
+          <span class="amt" id="startBal">25,000.000000 USDC</span>
+          <span class="dp">6dp — Arc USDC ERC-20 surface</span>
+        </div>
+        <p class="cite">Guardians can only call <b>proposeRotation</b> / <b>approveRotation</b> — RecoveryModule.sol:67, 78. Neither touches the balance.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2 : CLOCK ============ -->
+  <section>
+    <span class="step-n">Step 2 — Time travel</span>
+    <h2>The liveness ladder</h2>
+    <p class="lede">One clock drives everything. The vault's state is a pure function of how long the owner has been silent — no keeper advances it, and one owner signature resets it from any rung.</p>
+
+    <div class="console">
+      <div class="state-head"><span class="dot" id="dot"></span> <span id="stateLabel">Vault state</span></div>
+      <div class="state-name" id="stateName">Active</div>
+      <div class="state-sub" id="stateSub">Owner is present. The clock is at zero.</div>
+
+      <div class="viz" aria-hidden="true">
+        <div class="viz-track">
+          <div class="viz-seg" id="seg0"></div><div class="viz-seg" id="seg1"></div>
+          <div class="viz-seg" id="seg2"></div><div class="viz-seg" id="seg3"></div>
+        </div>
+        <div class="viz-marks">
+          <span id="mk0">Active</span><span id="mk1">3mo · nag</span>
+          <span id="mk2">6mo · guardians</span><span id="mk3">9mo · care</span>
+          <span id="mk4" style="flex:0 0 auto">12mo · claimable</span>
+        </div>
+      </div>
+
+      <label class="fld" for="clock">Timeline — drag to fast-forward</label>
+      <input type="range" id="clock" min="0" max="730" step="1" value="0"
+             aria-describedby="clockRead">
+      <div class="clock" id="clockRead">
+        <span>Elapsed silence: <b id="elapsedTxt">0 days (0.0 months)</b></span>
+        <span>Vault day: <b id="dayTxt">0</b></span>
+      </div>
+
+      <div class="balance">
+        <span>Vault balance <span class="amt" id="balTxt">25,000.000000</span> USDC</span>
+        <span>Owner key: <b id="ownerTxt" style="color:var(--brass)">0xA1…OWNER</b></span>
+      </div>
+
+      <div class="ctrl-row">
+        <button class="btn solid" id="btnBeat" type="button">Sign heartbeat — owner activity</button>
+        <button class="btn" id="btnPlay" type="button">▶ Auto-advance</button>
+        <button class="btn" id="btnReset" type="button">Reset demo</button>
+      </div>
+      <p class="cite">
+        State machine mirrors <b>LivenessLadder.sol:38–47</b> (checked high→low, boundaries inclusive)
+        and <b>HeirloomVault.sol:125–128</b> (<code>Claimed</code> overlays the clock).
+        Heartbeat mirrors <b>HeirloomVault.sol:172–186</b>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ STEPS 3-6 : ACTIONS ============ -->
+  <section>
+    <span class="step-n">Steps 3–6 — What each rung unlocks</span>
+    <h2>Care, recovery, theft, inheritance</h2>
+    <p class="lede">Panels unlock as the ladder climbs. Everything below runs the same checks the contracts run — including the ones that make an action fail.</p>
+
+    <div class="cols">
+      <div class="col" style="padding:0;background:transparent">
+
+        <!-- CARE -->
+        <div class="act" id="actCare">
+          <h3>Step 3 · Care mode</h3>
+          <div class="why" id="careWhy">Unlocks at 9 months (270 days)</div>
+          <p>A guardian you chose can pay essentials — capped, and only in allowed categories. Not the keys.</p>
+          <div class="kv"><span>Period cap</span><b>500.000000 USDC</b></div>
+          <div class="kv"><span>BILLS category cap</span><b>300.000000 USDC</b></div>
+          <div class="kv" id="careSpentKv"><span>Spent this period</span><b>0.000000 USDC</b></div>
+          <div class="ctrl-row">
+            <button class="btn" id="btnBill" type="button" disabled>Pay electricity — 120.000000</button>
+            <button class="btn danger" id="btnLux" type="button" disabled>Try LUXURY — 120.000000</button>
+          </div>
+          <p class="cite">Mirrors <b>HeirloomVault.sol:245–273</b> — category allowlist, then global cap, then per-category cap. Guardian spending does <em>not</em> reset the ladder (Q4).</p>
+        </div>
+
+        <!-- RECOVERY -->
+        <div class="act" id="actRec">
+          <h3>Step 4 · Recovery — the lost seed</h3>
+          <div class="why" id="recWhy">Guardians may propose at any time</div>
+          <p>Guardians rotate the vault to a new owner key. Funds never move; only the lock changes.</p>
+          <div class="kv"><span>Approvals</span><b id="recAppr">0 of 2 needed</b></div>
+          <div class="kv"><span>Timelock</span><b id="recEta">— not proposed</b></div>
+          <div class="ctrl-row">
+            <button class="btn" id="btnPropRot" type="button">Guardian 1 proposes rotation</button>
+            <button class="btn" id="btnAppr" type="button" disabled>Guardian 2 approves</button>
+            <button class="btn solid" id="btnExecRot" type="button" disabled>Execute rotation</button>
+          </div>
+          <p class="cite">Mirrors <b>RecoveryModule.sol:67–101</b> + <b>ConfigGuard.sol:99–110</b>. Threshold is checked at execute, not propose. Rotation re-arms the ladder — <b>HeirloomVault.sol:416–422</b>.</p>
+        </div>
+      </div>
+
+      <div class="col" style="padding:0;background:transparent">
+
+        <!-- THIEF -->
+        <div class="act" id="actThief">
+          <h3>Step 5 · The thief</h3>
+          <div class="why">A stolen key can propose. It cannot act quietly.</div>
+          <p>Someone with your key tries to redirect every heir to themselves. The proposal is announced the instant it is queued, and it cannot land for 7 days.</p>
+          <div class="kv"><span>Tier 1 payee</span><b id="thiefT1">Your cold backup</b></div>
+          <div class="kv"><span>Malicious proposal</span><b id="thiefState">none queued</b></div>
+          <div class="ctrl-row">
+            <button class="btn danger" id="btnThief" type="button">Thief: redirect all heirs to me</button>
+            <button class="btn solid" id="btnVeto" type="button" disabled>Owner: veto</button>
+            <button class="btn" id="btnThiefExec" type="button" disabled>Try to execute</button>
+          </div>
+          <p class="cite">Mirrors <b>ConfigGuard.sol:75–127</b> — event on propose, veto available at any point before execute, including after the eta matures.</p>
+        </div>
+
+        <!-- CLAIM -->
+        <div class="act" id="actClaim">
+          <h3>Step 6 · The claim</h3>
+          <div class="why" id="claimWhy">Unlocks at 12 months (365 days)</div>
+          <p>An heir opens their link and receives dollars. No seed phrase, no wallet jargon — and no way to name a different destination.</p>
+          <div id="claimTiers"></div>
+          <div class="ctrl-row">
+            <button class="btn solid" id="btnClaim" type="button" disabled>Open claim link &amp; receive</button>
+          </div>
+          <div class="note-out sealed" id="noteOut">🔒 Encrypted legacy note — decrypts only on a successful claim.</div>
+          <p class="cite">Mirrors <b>HeirloomVault.sol:212–228</b> (tier index only — no destination parameter) and cascade <b>ClaimsModule.sol:58–76</b>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOG ============ -->
+  <section style="border-bottom:none">
+    <span class="step-n">Event trail</span>
+    <h2>Everything the chain would have seen</h2>
+    <p class="lede">The contracts emit a full event trail; the off-chain services only ever observe it. This is that trail, with the reverts included — the failures are the product.</p>
+    <div class="log" id="log" aria-live="polite" aria-label="Simulated event log"></div>
+    <p class="cite">Event names match <b>src/HeirloomTypes.sol:102–115</b>.</p>
+  </section>
+
+  <footer>
+    <div class="foot-mark">Heirloom · built on Arc</div>
+    <div><span class="warn">Simulated. Unaudited testnet software.</span> Do not use with real funds. · <a href="https://github.com/gnanam1990/heirloom">Source</a></div>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================================================================
+   HEIRLOOM — SIMULATED VAULT
+   -------------------------------------------------------------------
+   Every rule below is a direct port of the Solidity in ../src. Line
+   citations are exact as of this commit; if you change a contract,
+   change the mirror and the citation together or the demo will drift.
+
+   Units: time is DAYS (contracts use seconds; 1 day = 86400).
+          money is 6dp integer units (Arc USDC ERC-20 surface),
+          so 1_000000 === $1.00. No floats in any money path.
+   =================================================================== */
+
+/* Production ladder — script/DeployHeirloom.s.sol:35-37
+   (90 / 180 / 270 / 365 days). */
+var LADDER = { nagAfter:90, guardianAlertAfter:180, careModeAfter:270, claimableAfter:365 };
+
+/* ConfigGuard.sol:31 — uint64 public constant TIMELOCK = 7 days; */
+var TIMELOCK_DAYS = 7;
+
+/* Claim windows — script/DeployHeirloom.s.sol:58-61.
+   Terminal tier's window is ignored; it never expires. */
+var WINDOWS = [30, 60, 0];
+
+/* Care config — .env.example defaults, 6dp. */
+var CARE_PERIOD_CAP = 500000000;   // 500.000000
+var CARE_BILLS_CAP  = 300000000;   // 300.000000
+var BILL_AMOUNT     = 120000000;   // 120.000000
+var START_BALANCE   = 25000000000; // 25,000.000000
+
+var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------------- state ---------------- */
+var v;
+function freshState(){
+  return {
+    day: 0,               // the single clock
+    lastActivity: 0,      // HeirloomVault.sol:71
+    isClaimed: false,     // ClaimsModule.sol:37
+    owner: '0xA1…OWNER',
+    balance: START_BALANCE,
+    careSpent: 0,
+    careBillsSpent: 0,
+    careEpoch: 0,
+    threshold: 2,
+    rot: null,            // {eta, approvals, newOwner, executed}
+    thief: null,          // {eta, vetoed, executed}
+    heirs: [
+      {name:'Your cold backup wallet', tag:'self-recovery',  addr:'0xB2…BACKUP'},
+      {name:'Priya (spouse)',          tag:'inheritance',    addr:'0xC3…SPOUSE'},
+      {name:'Asha Foundation',         tag:'terminal sink',  addr:'0xD4…CHARITY'}
+    ],
+    log: []
+  };
+}
+
+/* ---------------- money formatting (6dp, no floats) ---------------- */
+function usd(u){
+  var neg = u < 0; if(neg) u = -u;
+  var whole = Math.floor(u / 1000000);
+  var frac  = String(u % 1000000).padStart(6,'0');
+  return (neg?'-':'') + whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + frac;
+}
+
+/* ===================================================================
+   THE LADDER — port of LivenessLadder.stateAt
+   src/LivenessLadder.sol:30-48
+   =================================================================== */
+function stateAt(lastActivity, now){
+  // :38 — a non-advancing or backwards clock reads as "present".
+  if (now <= lastActivity) return 'Active';
+  var elapsed = now - lastActivity;                       // :40
+  // Checked high-to-low so the deepest satisfied rung wins.
+  // Boundaries are INCLUSIVE (>=) for Arc's non-decreasing timestamps.
+  if (elapsed >= LADDER.claimableAfter)     return 'Claimable';     // :43
+  if (elapsed >= LADDER.careModeAfter)      return 'CareMode';      // :44
+  if (elapsed >= LADDER.guardianAlertAfter) return 'GuardianAlert'; // :45
+  if (elapsed >= LADDER.nagAfter)           return 'Nagging';       // :46
+  return 'Active';                                                  // :47
+}
+
+/* HeirloomVault.state() — src/HeirloomVault.sol:125-128.
+   `Claimed` is the one lifecycle fact that overrides the clock. */
+function vaultState(){
+  if (v.isClaimed) return 'Claimed';                    // :126
+  return stateAt(v.lastActivity, v.day);                // :127
+}
+
+/* Which tier may claim — port of ClaimsModule.activeTierAt
+   src/ClaimsModule.sol:58-77, called with claimableAt per
+   HeirloomVault.sol:152. */
+function activeTier(){
+  var claimableAt = v.lastActivity + LADDER.claimableAfter;
+  if (v.day <= claimableAt) return 0;                   // :61
+  var elapsed = v.day - claimableAt;                    // :63
+  var cumulative = 0;
+  for (var i = 0; i + 1 < v.heirs.length; i++){
+    cumulative += WINDOWS[i];                           // :69
+    if (elapsed < cumulative) return i;                 // :70
+  }
+  return v.heirs.length - 1;                            // :76 — terminal, forever
+}
+
+/* _touch() — src/HeirloomVault.sol:172-186.
+   Called by EVERY owner-authenticated entry point, which is what makes
+   invariant 1 hold by construction rather than by remembering. */
+function touch(what){
+  if (v.isClaimed){                                     // :173
+    logRev('reverted WrongState(Claimed, Active) — funds already distributed');
+    return false;
+  }
+  var from = vaultState();
+  v.lastActivity = v.day;                               // :176
+  resetCareBudget();                                    // :179
+  if (from === 'CareMode') logIt('CareModeRevoked(day '+v.day+')', 'win');
+  logIt('Heartbeat(owner, day '+v.day+', from='+from+') · '+what);
+  return true;
+}
+
+/* _resetCareBudget() — src/HeirloomVault.sol:293-297.
+   Bumping the epoch invalidates every per-category tally at once. */
+function resetCareBudget(){
+  v.careEpoch++; v.careSpent = 0; v.careBillsSpent = 0;
+}
+
+/* ---------------- logging ---------------- */
+function logIt(msg, cls){
+  v.log.unshift({d:v.day, m:msg, c:cls||''});
+  if (v.log.length > 90) v.log.pop();
+}
+function logRev(msg){ logIt(msg, 'rev'); }
+
+/* ===================================================================
+   ACTIONS
+   =================================================================== */
+
+/* careSpend — src/HeirloomVault.sol:245-278 */
+function careSpend(category, amount){
+  var s = vaultState();
+  if (s !== 'CareMode'){                                          // :250-251
+    logRev('careSpend reverted WrongState('+s+', CareMode)'); return;
+  }
+  if (category !== 'BILLS' && category !== 'MEDICAL'){            // :252
+    logRev('careSpend reverted CategoryNotAllowed('+category+') — not on the owner’s allowlist');
+    return;
+  }
+  var globalRemaining = CARE_PERIOD_CAP - v.careSpent;            // :257
+  if (amount > globalRemaining){                                  // :258
+    logRev('careSpend reverted CapExceeded('+usd(amount)+', '+usd(globalRemaining)+' left this period)');
+    return;
+  }
+  var catRemaining = CARE_BILLS_CAP - v.careBillsSpent;           // :260
+  if (amount > catRemaining){                                     // :261
+    logRev('careSpend reverted CapExceeded('+usd(amount)+', '+usd(catRemaining)+' left in BILLS)');
+    return;
+  }
+  v.careSpent += amount; v.careBillsSpent += amount;              // :266-270
+  v.balance   -= amount;
+  logIt('CareSpend(careGuardian, utilityCo, '+category+', '+usd(amount)+')');
+  // NOTE: no touch() here — this is a GUARDIAN acting, not the owner.
+  // If it reset the ladder a guardian could hold the vault in CareMode
+  // forever and block the cascade. See docs/OPEN-QUESTIONS.md Q4.
+  render();
+}
+
+/* proposeRotation — src/RecoveryModule.sol:67-76 */
+function proposeRotation(){
+  if (v.rot && !v.rot.executed){ logRev('a rotation is already queued'); return; }
+  v.rot = { eta: v.day + TIMELOCK_DAYS, approvals: 1, newOwner:'0xE5…NEWKEY', executed:false, vetoed:false };
+  logIt('ProposalQueued(id 0, ROTATE_OWNER, guardian1, eta day '+v.rot.eta+')');
+  logIt('RotationApproved(id 0, guardian1, 1) — proposer counts as the first approval');
+  render();
+}
+/* approveRotation — src/RecoveryModule.sol:78-90 */
+function approveRotation(){
+  if (!v.rot || v.rot.executed || v.rot.vetoed){ logRev('no live rotation to approve'); return; }
+  v.rot.approvals++;
+  logIt('RotationApproved(id 0, guardian2, '+v.rot.approvals+')');
+  render();
+}
+/* execute + _applyRotation — ConfigGuard.sol:99-110, RecoveryModule.sol:96-101,
+   HeirloomVault._setOwner:416-423 */
+function executeRotation(){
+  if (!v.rot || v.rot.executed){ logRev('no live rotation'); return; }
+  if (v.rot.vetoed){ logRev('execute reverted ProposalDead(0)'); return; }
+  if (v.day < v.rot.eta){                                          // ConfigGuard.sol:105
+    logRev('execute reverted ProposalNotRipe(0, eta day '+v.rot.eta+', now day '+v.day+')');
+    return;
+  }
+  if (v.rot.approvals < v.threshold){                              // RecoveryModule.sol:98
+    logRev('execute reverted NotEnoughApprovals('+v.rot.approvals+', '+v.threshold+')');
+    return;
+  }
+  var before = v.balance, prev = v.owner;
+  v.rot.executed = true;
+  v.owner = v.rot.newOwner;
+  v.lastActivity = v.day;      // HeirloomVault.sol:420 — the ladder re-arms
+  resetCareBudget();
+  logIt('OwnerRotated('+prev+' → '+v.owner+')', 'win');
+  logIt('balance unchanged: '+usd(before)+' → '+usd(v.balance)+' USDC — the lock changed, the house didn’t', 'win');
+  render();
+}
+
+/* Thief path — a stolen key queues a beneficiary redirect.
+   ConfigGuard._queue:75-86 / veto:119-127 / execute:99-110 */
+function thiefPropose(){
+  if (v.thief && !v.thief.vetoed && !v.thief.executed){ logRev('already queued'); return; }
+  v.thief = { eta: v.day + TIMELOCK_DAYS, vetoed:false, executed:false };
+  logIt('ProposalQueued(id 1, SET_BENEFICIARIES, owner-key, eta day '+v.thief.eta+') — notification fires NOW');
+  // The stolen key is still the owner key, so this also counts as activity.
+  touch('config proposal');
+  render();
+}
+function ownerVeto(){
+  if (!v.thief || v.thief.executed){ logRev('nothing to veto'); return; }
+  if (v.thief.vetoed){ logRev('veto reverted ProposalDead(1)'); return; }
+  v.thief.vetoed = true;                                            // ConfigGuard.sol:126
+  logIt('ProposalVetoed(id 1, SET_BENEFICIARIES, owner)', 'win');
+  touch('veto');
+  render();
+}
+function thiefExecute(){
+  if (!v.thief){ logRev('nothing queued'); return; }
+  if (v.thief.vetoed){ logRev('execute reverted ProposalDead(1) — the owner killed it'); render(); return; }
+  if (v.day < v.thief.eta){
+    logRev('execute reverted ProposalNotRipe(1, eta day '+v.thief.eta+', now day '+v.day+')');
+    render(); return;
+  }
+  v.thief.executed = true;
+  v.heirs = [
+    {name:'THIEF', tag:'redirected', addr:'0x66…THIEF'},
+    {name:'THIEF', tag:'redirected', addr:'0x66…THIEF'},
+    {name:'THIEF', tag:'redirected', addr:'0x66…THIEF'}
+  ];
+  logRev('ProposalExecuted(id 1) — heirs redirected. The owner never vetoed in time.');
+  render();
+}
+
+/* claim — src/HeirloomVault.sol:212-229 */
+function doClaim(){
+  var s = vaultState();
+  if (s !== 'Claimable'){                                  // :213-214
+    logRev('claim reverted WrongState('+s+', Claimable)'); return;
+  }
+  var tier = activeTier();                                 // :216
+  var payee = v.heirs[tier];
+  if (v.balance === 0){ logRev('claim reverted NothingToClaim()'); return; }  // :222
+  var amount = v.balance;
+  v.isClaimed = true;                                      // :225 EFFECTS first
+  v.balance = 0;
+  logIt('Claimed_(tier '+tier+', '+payee.addr+', '+usd(amount)+')', 'win');
+  logIt(payee.name+' received '+usd(amount)+' USDC — no seed phrase, no wallet jargon', 'win');
+  revealNote(payee);
+  render();
+}
+
+/* ===================================================================
+   RENDER
+   =================================================================== */
+var el = function(id){ return document.getElementById(id); };
+
+var COPY = {
+  Active:        ['Owner is present. The clock is at zero.', false],
+  Nagging:       ['3 months silent — email and Telegram reminders sent. Most stories end here.', false],
+  GuardianAlert: ['6 months — your guardian circle has been notified. They may propose a key rotation.', true],
+  CareMode:      ['9 months — a designated guardian may now pay essentials, capped and category-limited.', true],
+  Claimable:     ['12 months — the cascade has begun. Beneficiaries may claim, in your order.', true],
+  Claimed:       ['Funds distributed. This state is absorbing — a claim cannot be undone.', false]
+};
+
+function render(){
+  var s = vaultState();
+  var elapsed = Math.max(0, v.day - v.lastActivity);
+
+  /* state card */
+  el('stateName').textContent = s === 'GuardianAlert' ? 'Guardians alerted'
+                              : s === 'CareMode' ? 'Care mode' : s;
+  el('stateName').className = 'state-name' + (COPY[s][1] ? ' warn' : (s==='Claimed'?' done':''));
+  el('stateSub').textContent = COPY[s][0];
+  el('dot').className = 'dot' + (COPY[s][1] ? ' warn' : '');
+  el('stateLabel').textContent = 'Vault · day ' + v.day + ' · ' + elapsed + 'd since last owner signature';
+
+  el('elapsedTxt').textContent = elapsed + ' days (' + (elapsed/30).toFixed(1) + ' months)';
+  el('dayTxt').textContent = v.day;
+  el('balTxt').textContent = usd(v.balance);
+  el('ownerTxt').textContent = v.owner;
+
+  /* ladder viz — four segments, filled by elapsed silence */
+  var bounds = [LADDER.nagAfter, LADDER.guardianAlertAfter, LADDER.careModeAfter, LADDER.claimableAfter];
+  for (var i=0;i<4;i++){
+    var seg = el('seg'+i);
+    var on = elapsed >= bounds[i];
+    seg.className = 'viz-seg' + (on ? (i>=1 ? ' warn' : ' on') : '');
+  }
+  var order = ['Active','Nagging','GuardianAlert','CareMode','Claimable'];
+  var cur = order.indexOf(s === 'Claimed' ? 'Claimable' : s);
+  for (var m=0;m<5;m++){
+    el('mk'+m).className = (m === cur ? 'cur' : '');
+  }
+
+  /* care panel */
+  var inCare = (s === 'CareMode');
+  el('actCare').className = 'act' + (inCare ? '' : ' locked');
+  el('btnBill').disabled = !inCare;
+  el('btnLux').disabled  = !inCare;
+  el('careWhy').textContent = inCare
+    ? 'Active — guardian may spend within caps'
+    : 'Unlocks at 9 months (270 days) · currently ' + s;
+  el('careSpentKv').innerHTML = '<span>Spent this period</span><b>' + usd(v.careSpent) + ' USDC</b>';
+
+  /* recovery panel */
+  var r = v.rot;
+  el('recAppr').textContent = (r ? r.approvals : 0) + ' of ' + v.threshold + ' needed';
+  if (!r) el('recEta').textContent = '— not proposed';
+  else if (r.executed) el('recEta').textContent = 'executed — owner is now ' + v.owner;
+  else el('recEta').textContent = 'matures day ' + r.eta + (v.day >= r.eta ? ' — ripe' : ' — ' + (r.eta - v.day) + 'd to go');
+  el('btnPropRot').disabled = !!(r && !r.executed);
+  el('btnAppr').disabled    = !(r && !r.executed && r.approvals < 3);
+  el('btnExecRot').disabled = !(r && !r.executed);
+
+  /* thief panel */
+  var t = v.thief;
+  el('thiefT1').textContent = v.heirs[0].name;
+  el('thiefState').textContent = !t ? 'none queued'
+    : t.executed ? 'EXECUTED — heirs redirected'
+    : t.vetoed   ? 'vetoed by owner — dead'
+    : 'queued, matures day ' + t.eta + (v.day >= t.eta ? ' (ripe)' : ' (' + (t.eta - v.day) + 'd to go)');
+  el('thiefState').parentElement.className = 'kv' + (t && t.executed ? ' bad' : (t && t.vetoed ? ' good' : ''));
+  el('btnVeto').disabled      = !(t && !t.vetoed && !t.executed);
+  el('btnThiefExec').disabled = !(t && !t.executed);
+
+  /* claim panel */
+  var canClaim = (s === 'Claimable');
+  el('actClaim').className = 'act' + (canClaim || s==='Claimed' ? '' : ' locked');
+  el('claimWhy').textContent = s === 'Claimed' ? 'Claimed — this state is absorbing'
+    : canClaim ? 'Open — tier ' + activeTier() + ' may claim now'
+    : 'Unlocks at 12 months (365 days) · currently ' + s;
+  el('btnClaim').disabled = !canClaim;
+  renderClaimTiers(canClaim ? activeTier() : -1);
+
+  el('btnBeat').disabled = v.isClaimed;
+
+  renderTierList();
+  renderGuardians();
+  renderLog();
+}
+
+function renderTierList(){
+  var host = el('tierList'); if(!host) return;
+  host.innerHTML = '';
+  v.heirs.forEach(function(h,i){
+    var win = (i === v.heirs.length-1) ? 'never expires' : WINDOWS[i] + '-day window';
+    var row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = '<span class="tier-badge">'+i+'</span>' +
+                    '<span class="who">'+esc(h.name)+' <span class="win">· '+h.tag+'</span></span>' +
+                    '<span class="win">'+win+'</span>';
+    host.appendChild(row);
+  });
+}
+
+function renderClaimTiers(open){
+  var host = el('claimTiers'); if(!host) return;
+  host.innerHTML = '';
+  v.heirs.forEach(function(h,i){
+    var win = (i === v.heirs.length-1) ? 'terminal · never expires' : WINDOWS[i]+'d window';
+    var row = document.createElement('div');
+    row.className = 'tier-row' + (i === open ? ' open' : '') + (v.isClaimed ? ' done' : '');
+    row.innerHTML = '<span class="tier-badge">'+i+'</span>' +
+                    '<span class="who">'+esc(h.name)+'</span>' +
+                    '<span class="win">'+(i===open?'OPEN NOW':win)+'</span>';
+    host.appendChild(row);
+  });
+}
+
+function renderGuardians(){
+  var host = el('guardList'); if(!host) return;
+  host.innerHTML = '';
+  ['Guardian 1 · sibling','Guardian 2 · lawyer','Guardian 3 · closest friend'].forEach(function(g,i){
+    var row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = '<span class="tier-badge">G'+(i+1)+'</span><span class="who">'+g+'</span>' +
+                    '<span class="win">may propose rotation only</span>';
+    host.appendChild(row);
+  });
+}
+
+function renderLog(){
+  var host = el('log');
+  host.innerHTML = '';
+  if (!v.log.length){
+    host.innerHTML = '<div><span class="ts">day 0</span>Vault created. Waiting for the clock to move.</div>';
+    return;
+  }
+  v.log.forEach(function(e){
+    var d = document.createElement('div');
+    if (e.c) d.className = e.c;
+    d.innerHTML = '<span class="ts">day '+e.d+'</span><b>'+esc(e.m)+'</b>';
+    host.appendChild(d);
+  });
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+/* The emotional beat — an encrypted note that opens only on a real claim. */
+function revealNote(payee){
+  var out = el('noteOut');
+  var msg = '— for ' + payee.name + ' —\n\n' +
+            'If you are reading this, the vault did what it promised.\n' +
+            'The paperwork is in the green folder. The Bangalore flat is\n' +
+            'already in your name. Don’t let anyone rush you.\n\n' +
+            'I planned for this so that you would not have to.\n\n' +
+            '— A.';
+  out.className = 'note-out open';
+  if (reduced){ out.textContent = msg; return; }
+  var chars = '01<>#$%&@*abcdef', i = 0;
+  var iv = setInterval(function(){
+    i += 2;
+    var shown = msg.slice(0, i);
+    var noise = msg.slice(i).replace(/[^\s]/g, function(){
+      return chars[Math.floor(Math.random()*chars.length)]; });
+    out.textContent = shown + noise;
+    if (i >= msg.length){ clearInterval(iv); out.textContent = msg; }
+  }, 16);
+}
+
+/* ===================================================================
+   WIRING
+   =================================================================== */
+var clock = el('clock'), playTimer = null;
+
+/* Every action re-renders, whatever path it took. The revert paths log and
+   return early, so without this a rejected action would be computed correctly
+   and then never shown — and the rejections are the whole point of the demo. */
+function act(fn){
+  return function(){ try { fn.apply(null, arguments); } finally { render(); } };
+}
+
+clock.addEventListener('input', function(){
+  v.day = parseInt(clock.value, 10);
+  render();
+});
+
+el('btnBeat').addEventListener('click', act(function(){ touch('heartbeat'); }));
+
+el('btnReset').addEventListener('click', function(){
+  v = freshState(); clock.value = 0; stopPlay();
+  el('noteOut').className = 'note-out sealed';
+  el('noteOut').textContent = '🔒 Encrypted legacy note — decrypts only on a successful claim.';
+  render();
+});
+
+el('thresh').addEventListener('change', function(){
+  v.threshold = parseInt(this.value, 10);
+  logIt('guardian threshold set to ' + v.threshold + ' of 3');
+  render();
+});
+
+el('famName').addEventListener('input', function(){
+  var n = this.value.trim() || 'Family';
+  v.heirs[1].name = n;
+  render();
+});
+
+el('btnBill').addEventListener('click', act(function(){ careSpend('BILLS', BILL_AMOUNT); }));
+el('btnLux').addEventListener('click',  act(function(){ careSpend('LUXURY', BILL_AMOUNT); }));
+
+el('btnPropRot').addEventListener('click', act(proposeRotation));
+el('btnAppr').addEventListener('click', act(approveRotation));
+el('btnExecRot').addEventListener('click', act(executeRotation));
+
+el('btnThief').addEventListener('click', act(thiefPropose));
+el('btnVeto').addEventListener('click', act(ownerVeto));
+el('btnThiefExec').addEventListener('click', act(thiefExecute));
+
+el('btnClaim').addEventListener('click', act(doClaim));
+
+/* Auto-advance: NEVER runs for prefers-reduced-motion users, and never
+   starts on its own for anyone — the visitor asks for it. */
+function stopPlay(){
+  if (playTimer){ clearInterval(playTimer); playTimer = null; }
+  el('btnPlay').textContent = '▶ Auto-advance';
+}
+function startPlay(){
+  playTimer = setInterval(function(){
+    if (v.day >= 730){ stopPlay(); return; }
+    v.day += 2; clock.value = v.day; render();
+  }, 90);
+  el('btnPlay').textContent = '❙❙ Pause';
+}
+if (reduced){
+  el('btnPlay').remove();   // manual stepping only
+} else {
+  el('btnPlay').addEventListener('click', function(){
+    if (playTimer) stopPlay(); else startPlay();
+  });
+}
+
+/* boot */
+v = freshState();
+el('startBal').textContent = usd(START_BALANCE) + ' USDC';
+render();
+})();
+</script>
+</body>
+</html>

@@ -73,24 +73,17 @@
   section{padding:clamp(52px,8vw,78px) 0;border-top:1px solid var(--line)}
   .hero{padding:56px 0 clamp(48px,7vw,64px);border-top:none}
 
-  /* ═══════ HERO ECG — the signature element ═══════ */
-  .ecg-card{margin-top:clamp(28px,5vw,38px);max-width:620px}
-  .ecg-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
-  .ecg-head .lhs{display:flex;align-items:center;gap:11px}
-  .ecg-state{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(1.7rem,4vw,2.1rem);letter-spacing:-.015em;margin:14px 0 3px;color:var(--ink);transition:color .5s}
+  /* ═══════ HERO VAULT CARD — real on-chain data + the ECG signature ═══════ */
+  .hero-vault{margin-top:clamp(28px,5vw,38px);max-width:620px}
+  .ecg-state{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(1.7rem,4vw,2.1rem);letter-spacing:-.015em;margin:16px 0 3px;color:var(--ink);transition:color .5s}
   .ecg-state.warn{color:var(--ember)}
   .ecg-sub{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--ink-3);min-height:1.3em}
-  .ecg-wrap{margin:16px 0 4px;width:100%;height:clamp(96px,20vw,132px);position:relative}
+  .ecg-wrap{margin:16px 0 18px;width:100%;height:clamp(96px,20vw,132px);position:relative}
   .ecg-wrap svg{width:100%;height:100%;display:block}
   .ecg-line{fill:none;stroke:var(--amber);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(232,184,75,.55))}
   .ecg-base{stroke:var(--line);stroke-width:1;stroke-dasharray:3 6}
-  .demo-btn{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:12px 20px;min-height:44px;border-radius:9px;cursor:pointer;border:1px solid var(--amber-line);background:transparent;color:var(--amber);transition:.2s;margin-top:6px}
-  .demo-btn:hover{background:var(--amber);color:#12100A}
-  .demo-note{font-size:.84rem;color:var(--ink-3);margin-top:14px}
 
-  /* ── live on-chain card ── */
-  .live-now{margin-top:20px;max-width:620px}
-  .live-now .ln-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .ln-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
   .ln-title{display:flex;align-items:center;gap:9px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
   .ln-live{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(95,185,138,.7);animation:beat 1.7s ease-in-out infinite;flex:0 0 7px}
   .ln-live.stale{background:var(--ink-3);box-shadow:none;animation:none}
@@ -251,29 +244,26 @@
       <a class="btn sec" href="https://github.com/gnanam1990/heirloom">View the contracts</a>
     </div>
 
-    <!-- THE SIGNATURE ELEMENT — an ECG that beats while Active and flattens as the vault escalates -->
-    <div class="card ecg-card fu4" id="demo">
-      <div class="ecg-head">
-        <span class="lhs"><span class="dot" id="dot"></span> Vault · liveness ladder — accelerated demo</span>
+    <!-- THE SIGNATURE ELEMENT — one real card. The amber ECG reflects the vault's
+         TRUE on-chain state (a steady beat while Active; it flattens if the real
+         vault ever escalates). No simulation, no auto-cycling — it reads the chain
+         on load and on Refresh, and holds the true state. -->
+    <div class="card hero-vault fu4" id="demo">
+      <div class="ln-head">
+        <span class="ln-title"><span class="ln-live" id="lnLive"></span> Live right now on Arc testnet</span>
+        <button class="ln-refresh" id="lnRefresh" type="button">Refresh</button>
       </div>
-      <div class="ecg-state" id="state">Active</div>
-      <div class="ecg-sub" id="sub">Owner activity detected. Clock reset.</div>
+
+      <div class="ecg-state" id="ecgState">Active</div>
+      <div class="ecg-sub" id="ecgSub">Reading the vault…</div>
       <div class="ecg-wrap" aria-hidden="true">
-        <svg id="ecg" viewBox="0 0 600 132" preserveAspectRatio="none" role="img" aria-label="Heartbeat waveform">
+        <svg id="ecg" viewBox="0 0 600 132" preserveAspectRatio="none" role="img" aria-label="Live vault heartbeat">
           <line class="ecg-base" x1="0" y1="74" x2="600" y2="74"></line>
           <polyline class="ecg-line" id="ecgLine" points=""></polyline>
         </svg>
       </div>
-      <button class="demo-btn" id="beatBtn" type="button">Sign heartbeat</button>
-      <p class="demo-note">One signature — any transaction counts — resets everything. Silence escalates: nag → guardians → care mode → claimable.</p>
-    </div>
 
-    <div class="card live-now fu4">
-      <div class="ln-head">
-        <span class="ln-title"><span class="ln-live" id="lnLive"></span> Live right now on Arc</span>
-        <button class="ln-refresh" id="lnRefresh" type="button">Refresh</button>
-      </div>
-      <p class="ln-claim">This is a real vault, live on Arc testnet — verify every value on the explorer.</p>
+      <p class="ln-claim">A real vault, live on Arc testnet — verify every value on the explorer.</p>
 
       <div class="ln-grid">
         <div class="ln-cell"><span class="k">State</span><span class="v" id="lnState">—</span></div>
@@ -501,6 +491,79 @@
     revealables.forEach(function(el){ io.observe(el); });
   }
 
+  /* ═════════ HERO ECG — reflects the REAL vault state ═════════
+     The amber waveform beats while the vault is Active and eases toward a flat
+     ember line if it ever escalates. It is driven ONLY by the live on-chain read
+     below — setEcg() is called on each successful read and on fallback. There is
+     NO timer advancing the state: the ambient pulse is a fixed heartbeat rhythm
+     on requestAnimationFrame, not a state-change loop. It renders the true
+     current state and holds there.                                          */
+  var ecgState = document.getElementById('ecgState'),
+      ecgSub = document.getElementById('ecgSub'),
+      ecgLine = document.getElementById('ecgLine'),
+      rungs = document.querySelectorAll('#ladder .rung');
+  var vit = 1, vitTarget = 1, phase = 0, raf = null;
+  var AMBER = [232,184,75], EMBER = [201,86,63];
+  /* per-state vitality (Active…Recovered) and a plain-language line */
+  var VIT  = [1.00, 0.70, 0.46, 0.22, 0.00, 0.00, 1.00];
+  var SUBS = [
+    'Owner is present — the clock is at zero.',
+    'Three months quiet — reminders are going out.',
+    'Guardians have been notified.',
+    'A chosen guardian may cover essentials, capped.',
+    'The cascade is open — heirs may claim in order.',
+    'Funds have been distributed.',
+    'Recovered to a new key — the clock is re-armed.'
+  ];
+
+  function mix(a, b, t){ return 'rgb(' +
+    Math.round(a[0]+(b[0]-a[0])*t) + ',' +
+    Math.round(a[1]+(b[1]-a[1])*t) + ',' +
+    Math.round(a[2]+(b[2]-a[2])*t) + ')'; }
+
+  /* one PQRST beat as a function of phase (0..1) */
+  function ecgAt(x){
+    function g(c, w){ var d = x - c; return Math.exp(-(d*d)/(2*w*w)); }
+    return 0.17*g(0.17,0.024) - 0.13*g(0.30,0.008) + 1.00*g(0.335,0.0085)
+         - 0.30*g(0.375,0.011) + 0.30*g(0.60,0.037);
+  }
+
+  var W = 600, MID = 74, MAXAMP = 60, BEATS = 2.3;
+  function drawECG(){
+    var pts = '', i, ph, y;
+    for (i = 0; i <= W; i += 3){
+      ph = (((i / W) * BEATS) + phase) % 1;
+      y = MID - ecgAt(ph) * MAXAMP * vit;
+      pts += i + ',' + y.toFixed(1) + ' ';
+    }
+    ecgLine.setAttribute('points', pts);
+    ecgLine.style.stroke = mix(AMBER, EMBER, 1 - Math.max(vit, 0));
+  }
+
+  /* ambient breathing pulse — a fixed rhythm, NOT a state loop */
+  function loop(){
+    vit += (vitTarget - vit) * 0.05;
+    phase = (phase + (0.0015 + 0.011 * Math.max(vit, 0))) % 1;
+    drawECG();
+    raf = requestAnimationFrame(loop);
+  }
+
+  /* point the ECG at the real on-chain state; called only by the live read */
+  function setEcg(idx){
+    if (idx < 0 || idx >= VIT.length) idx = 0;
+    vitTarget = VIT[idx];
+    ecgState.textContent = STATE_NAMES[idx] || ('#' + idx);
+    ecgState.className = 'ecg-state' + (idx >= 2 && idx <= 4 ? ' warn' : '');
+    ecgSub.textContent = SUBS[idx] || '';
+    var rungIdx = Math.max(0, Math.min(4, idx));
+    for (var r = 0; r < rungs.length; r++){ rungs[r].classList.toggle('on', r === rungIdx); }
+    if (reduced){ vit = vitTarget; drawECG(); }   /* no rAF: snap and redraw */
+  }
+
+  drawECG();                                        /* first paint, always visible */
+  if (reduced){ vit = vitTarget; drawECG(); }
+  else { raf = requestAnimationFrame(loop); }
+
   /* ═════════ LIVE ON-CHAIN VAULT CARD ═════════
      Reads the real production vault straight from Arc testnet, read-only.
 
@@ -592,6 +655,7 @@
                        'values verified on-chain, not a live read. Press Refresh, or check the explorer.';
     note.classList.add('show');
     el('lnAsOf').textContent = 'cached — live read failed';
+    setEcg(0); /* last-verified state is Active */
   }
 
   var inflight = false;
@@ -633,6 +697,7 @@
       el('lnGuard').textContent = v[5].toString() + ' of 3';
       el('lnLive').className = 'ln-live';
       el('lnAsOf').textContent = new Date().toLocaleTimeString();
+      setEcg(stateIdx); /* the ECG reflects the true on-chain state, then holds */
     } catch (err) {
       showFallback((err && err.name === 'AbortError') ? 'timed out' : (err.message || 'network error'));
     } finally {
@@ -687,88 +752,6 @@
     jio.observe(journey);
   } else {
     jSteps.forEach(function(st){ st.classList.add('on'); });
-  }
-
-  /* ═════════ HERO ECG — "alive because you're here" ═════════
-     The waveform IS the product. It beats strongly while Active; as the
-     accelerated demo escalates through the ladder the pulse slows and
-     flattens toward a dead line, and its colour warms from amber toward
-     ember. "Sign heartbeat" springs it back to a full, living beat.        */
-  var tiers = [
-    {at:0,   label:"Active",           sub:"Owner activity detected. Clock reset.",        warn:false, rung:0, vit:1.00},
-    {at:25,  label:"Nagging",          sub:"3 months silent → reminders sent.",            warn:false, rung:1, vit:0.70},
-    {at:50,  label:"Guardians alerted",sub:"6 months → your circle is notified.",          warn:true,  rung:2, vit:0.46},
-    {at:75,  label:"Care mode",        sub:"9 months → capped essentials spending only.",  warn:true,  rung:3, vit:0.22},
-    {at:100, label:"Claimable",        sub:"12 months → cascade begins. Funds walk home.", warn:true,  rung:4, vit:0.00}
-  ];
-  var stateEl = document.getElementById('state'),
-      subEl = document.getElementById('sub'),
-      beatBtn = document.getElementById('beatBtn'),
-      ecgLine = document.getElementById('ecgLine'),
-      rungs = document.querySelectorAll('#ladder .rung');
-  var p = 0, timer = null, vitTarget = 1, vit = 1, phase = 0, raf = null;
-
-  var AMBER = [232,184,75], EMBER = [201,86,63];
-  function mix(a, b, t){ return 'rgb(' +
-    Math.round(a[0]+(b[0]-a[0])*t) + ',' +
-    Math.round(a[1]+(b[1]-a[1])*t) + ',' +
-    Math.round(a[2]+(b[2]-a[2])*t) + ')'; }
-
-  /* one PQRST beat as a function of phase (0..1) */
-  function ecgAt(x){
-    function g(c,w){ var d=x-c; return Math.exp(-(d*d)/(2*w*w)); }
-    return 0.17*g(0.17,0.024)      /* P */
-         - 0.13*g(0.30,0.008)      /* Q */
-         + 1.00*g(0.335,0.0085)    /* R */
-         - 0.30*g(0.375,0.011)     /* S */
-         + 0.30*g(0.60,0.037);     /* T */
-  }
-
-  var W = 600, MID = 74, MAXAMP = 60, BEATS = 2.3;
-  function drawECG(){
-    var pts = '', i, ph, y;
-    for (i = 0; i <= W; i += 3){
-      ph = (((i / W) * BEATS) + phase) % 1;
-      y = MID - ecgAt(ph) * MAXAMP * vit;
-      pts += i + ',' + y.toFixed(1) + ' ';
-    }
-    ecgLine.setAttribute('points', pts);
-    ecgLine.style.stroke = mix(AMBER, EMBER, 1 - vit);
-  }
-
-  function loop(){
-    vit += (vitTarget - vit) * 0.05;
-    phase = (phase + (0.0015 + 0.011 * Math.max(vit, 0))) % 1;
-    drawECG();
-    raf = requestAnimationFrame(loop);
-  }
-
-  function render(){
-    var cur = tiers[0];
-    for (var i = 0; i < tiers.length; i++){ if (p >= tiers[i].at) cur = tiers[i]; }
-    stateEl.textContent = cur.label;
-    stateEl.className = 'ecg-state' + (cur.warn ? ' warn' : '');
-    subEl.textContent = cur.sub;
-    vitTarget = cur.vit;
-    for (var r = 0; r < rungs.length; r++){ rungs[r].classList.toggle('on', r === cur.rung); }
-  }
-  function tick(){ p = Math.min(100, p + 0.5); render(); if (p >= 100){ clearInterval(timer); timer = null; } }
-  function start(){ if (!timer && !reduced) timer = setInterval(tick, 120); }
-
-  beatBtn.addEventListener('click', function(){ p = 0; render(); start(); });
-  render();
-
-  /* Always paint one frame synchronously so the waveform is visible even before
-     the first requestAnimationFrame fires (e.g. a tab that loads in the
-     background, where rAF is paused until it becomes visible). */
-  drawECG();
-
-  if (reduced){
-    /* static, legible waveform at full vitality — no animation */
-    vit = 1; phase = 0; drawECG();
-  } else {
-    raf = requestAnimationFrame(loop);
-    start();
   }
 })();
 </script>

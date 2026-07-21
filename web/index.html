@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heirloom — the wallet that can't be lost</title>
+<meta name="description" content="Heirloom makes money liveness-aware. Lost keys, lost people, lost agents — funds never get stranded. Built on Arc.">
+<meta name="theme-color" content="#0A0E14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ═══════ "the vault at rest" — dark theme, one shared token set ═══════ */
+  :root{
+    --bg:#0A0E14;          /* near-black, slightly cool */
+    --bg-2:#0C121B;        /* faint lift for alternating depth */
+    --card:#111823;        /* panels */
+    --line:#1A2433;        /* borders */
+    --line-soft:#151D28;   /* inner dividers */
+    --ink:#E6EAF0;         /* primary text */
+    --ink-2:#9AA6B8;       /* body copy — derived mid-tone, ~7:1 on --bg */
+    --ink-3:#6B7688;       /* muted labels/captions */
+    --amber:#E8B84B;       /* PRIMARY ACCENT — the lit lamp */
+    --amber-2:#F2CE77;     /* brighter amber for gradients */
+    --amber-dim:#B8923A;   /* pressed / hover-solid */
+    --amber-soft:rgba(232,184,75,.11);
+    --amber-line:rgba(232,184,75,.28);
+    --blue:#4CA0E8;        /* SECONDARY — on-chain / USDC data values only */
+    --ember:#C9563F;       /* escalation / alert */
+    --ember-soft:rgba(201,86,63,.12);
+    --ok:#5FB98A;          /* success (copied, decrypted note) */
+    --ok-soft:rgba(95,185,138,.12);
+    --glow:0 0 0 1px rgba(232,184,75,.16) inset,0 10px 34px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 clamp(18px,5vw,26px)}
+  a{color:var(--amber);text-decoration:none;transition:color .2s}
+  a:hover{color:var(--amber-2)}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
+
+  /* ── nav ── */
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:24px 0;gap:16px;flex-wrap:wrap}
+  .logo{font-family:'Fraunces',serif;font-weight:600;font-size:1.4rem;letter-spacing:-.01em;color:var(--ink)}
+  .logo span{color:var(--amber)}
+  .nav-links a{color:var(--ink-2);font-size:.85rem;font-weight:500;margin-left:clamp(16px,3vw,26px)}
+  .nav-links a:first-child{margin-left:0}
+  .nav-links a:hover{color:var(--amber)}
+
+  /* ── shared type ── */
+  .pill{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-line);padding:6px 13px;border-radius:100px;margin-bottom:26px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px rgba(232,184,75,.7);animation:beat 1.7s ease-in-out infinite;flex:0 0 7px}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(2.5rem,6vw,4.5rem);line-height:1.03;letter-spacing:-.02em;max-width:15ch}
+  h1 .grad{font-style:italic;background:linear-gradient(100deg,var(--amber),var(--amber-2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(1.7rem,3.6vw,2.5rem);line-height:1.12;letter-spacing:-.015em;max-width:20ch}
+  h3{font-family:'Inter',sans-serif;font-weight:600;font-size:1.1rem;letter-spacing:-.01em;color:var(--ink)}
+  .sub{font-size:clamp(1rem,1.4vw,1.14rem);color:var(--ink-2);max-width:52ch;margin-top:22px;font-weight:400}
+  .lede{color:var(--ink-2);max-width:58ch;margin-top:14px;font-size:1rem}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin-bottom:14px;display:block}
+
+  /* ── buttons (≥44px tap targets) ── */
+  .cta{margin-top:32px;display:flex;gap:13px;flex-wrap:wrap}
+  .btn{font-size:.9rem;font-weight:600;padding:14px 26px;min-height:44px;border-radius:11px;cursor:pointer;text-decoration:none;transition:background .2s,border-color .2s,color .2s,transform .2s,box-shadow .2s;border:1px solid transparent;display:inline-flex;align-items:center;font-family:'Inter',sans-serif}
+  .btn.pri{background:var(--amber);color:#12100A}
+  .btn.pri:hover{background:var(--amber-2);color:#12100A;transform:translateY(-1px);box-shadow:0 8px 26px rgba(232,184,75,.28)}
+  .btn.sec{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn.sec:hover{border-color:var(--amber-line);color:var(--amber);transform:translateY(-1px)}
+
+  /* ── cards ── */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:clamp(22px,4vw,30px)}
+
+  section{padding:clamp(52px,8vw,78px) 0;border-top:1px solid var(--line)}
+  .hero{padding:56px 0 clamp(48px,7vw,64px);border-top:none}
+
+  /* ═══════ HERO ECG — the signature element ═══════ */
+  .ecg-card{margin-top:clamp(28px,5vw,38px);max-width:620px}
+  .ecg-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+  .ecg-head .lhs{display:flex;align-items:center;gap:11px}
+  .ecg-state{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(1.7rem,4vw,2.1rem);letter-spacing:-.015em;margin:14px 0 3px;color:var(--ink);transition:color .5s}
+  .ecg-state.warn{color:var(--ember)}
+  .ecg-sub{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--ink-3);min-height:1.3em}
+  .ecg-wrap{margin:16px 0 4px;width:100%;height:clamp(96px,20vw,132px);position:relative}
+  .ecg-wrap svg{width:100%;height:100%;display:block}
+  .ecg-line{fill:none;stroke:var(--amber);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(232,184,75,.55))}
+  .ecg-base{stroke:var(--line);stroke-width:1;stroke-dasharray:3 6}
+  .demo-btn{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:12px 20px;min-height:44px;border-radius:9px;cursor:pointer;border:1px solid var(--amber-line);background:transparent;color:var(--amber);transition:.2s;margin-top:6px}
+  .demo-btn:hover{background:var(--amber);color:#12100A}
+  .demo-note{font-size:.84rem;color:var(--ink-3);margin-top:14px}
+
+  /* ── live on-chain card ── */
+  .live-now{margin-top:20px;max-width:620px}
+  .live-now .ln-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .ln-title{display:flex;align-items:center;gap:9px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+  .ln-live{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px rgba(95,185,138,.7);animation:beat 1.7s ease-in-out infinite;flex:0 0 7px}
+  .ln-live.stale{background:var(--ink-3);box-shadow:none;animation:none}
+  .ln-refresh{font-family:'IBM Plex Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;min-height:36px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink-2);cursor:pointer;transition:.2s}
+  .ln-refresh:hover:not(:disabled){border-color:var(--amber-line);color:var(--amber)}
+  .ln-refresh:disabled{opacity:.5;cursor:wait}
+  .ln-claim{font-size:.86rem;color:var(--ink-2);margin:10px 0 18px}
+  .ln-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ln-cell{background:var(--card);padding:14px 16px}
+  .ln-cell .k{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px}
+  /* on-chain data values → USDC blue (the ONLY place blue is used as accent) */
+  .ln-cell .v{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:1.06rem;color:var(--blue);line-height:1.25}
+  .ln-cell .v small{font-family:'IBM Plex Mono',monospace;font-size:.64rem;font-weight:400;color:var(--ink-3);display:block;margin-top:4px;letter-spacing:0}
+  .ln-addr{display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--ink-3)}
+  .ln-addr code{color:var(--ink-2);word-break:break-all}
+  .ln-copy{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;padding:6px 11px;min-height:34px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink-2);cursor:pointer;transition:.2s}
+  .ln-copy:hover{border-color:var(--amber-line);color:var(--amber)}
+  .ln-copy.done{border-color:var(--ok);color:var(--ok)}
+  .ln-foot{font-family:'IBM Plex Mono',monospace;font-size:.64rem;color:var(--ink-3);margin-top:12px;line-height:1.7}
+  .ln-foot b{color:var(--ink-2);font-weight:500}
+  .ln-note{display:none;margin-top:12px;padding:11px 14px;border-radius:10px;background:var(--ember-soft);border:1px solid rgba(201,86,63,.3);font-size:.78rem;color:#E39178}
+  .ln-note.show{display:block}
+
+  /* ── stats ── */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(18px,3vw,26px);margin-top:56px;padding-top:40px;border-top:1px solid var(--line)}
+  .stat b{font-family:'Fraunces',serif;font-size:clamp(1.8rem,3.4vw,2.2rem);font-weight:500;color:var(--ink);letter-spacing:-.01em;display:block;line-height:1.08}
+  .stat span{font-size:.86rem;color:var(--ink-3)}
+
+  /* ── how it works: 5-step journey ── */
+  .journey{margin-top:44px;position:relative}
+  .j-line{position:absolute;top:26px;left:6%;right:6%;height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+  .j-line i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--amber-2));transition:width .9s cubic-bezier(.2,.7,.2,1)}
+  .j-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;position:relative;list-style:none;margin:0;padding:0}
+  .j-step{text-align:center;opacity:.4;transition:opacity .55s ease,transform .55s cubic-bezier(.2,.7,.2,1);transform:translateY(10px)}
+  .j-step.on{opacity:1;transform:none}
+  .j-badge{width:54px;height:54px;margin:0 auto 16px;border-radius:50%;background:var(--card);border:2px solid var(--line);display:grid;place-items:center;position:relative;z-index:2;transition:border-color .45s,box-shadow .45s,background .45s}
+  .j-step.on .j-badge{border-color:var(--amber);box-shadow:0 0 0 6px var(--amber-soft),0 0 22px rgba(232,184,75,.18)}
+  .j-badge svg{width:24px;height:24px;stroke:var(--ink-3);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;transition:stroke .45s}
+  .j-step.on .j-badge svg{stroke:var(--amber)}
+  .j-num{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.14em;color:var(--ink-3);display:block;margin-bottom:7px}
+  .j-step.on .j-num{color:var(--amber)}
+  .j-step h3{font-size:1rem;margin-bottom:6px;line-height:1.25}
+  .j-step p{font-size:.86rem;color:var(--ink-2);line-height:1.55}
+  .j-tech{font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--ink-3);margin-top:9px;line-height:1.6;opacity:0;transition:opacity .5s}
+  .j-step.on .j-tech{opacity:1}
+  /* the signature moment: an amber coin travelling home into the heir step */
+  .j-coin{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--amber-2),var(--amber-dim));box-shadow:0 0 10px rgba(232,184,75,.6);top:19px;left:6%;opacity:0;z-index:3;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-size:.5rem;color:#12100A;font-weight:600}
+  .j-coin.travel{animation:coinTravel 2.6s cubic-bezier(.4,.05,.3,1) .3s forwards}
+  @keyframes coinTravel{0%{opacity:0;left:6%}8%{opacity:1}88%{opacity:1;left:calc(94% - 16px)}100%{opacity:0;left:calc(94% - 16px);transform:scale(.4)}}
+  .j-step.arrive .j-badge{background:var(--amber-soft)}
+  @media(max-width:860px){
+    .j-steps{grid-template-columns:1fr;gap:26px;text-align:left}
+    .j-step{text-align:left;display:grid;grid-template-columns:54px 1fr;gap:16px;align-items:start}
+    .j-badge{margin:0}
+    .j-line{top:0;bottom:0;left:26px;right:auto;width:2px;height:auto}
+    .j-line i{width:100%!important;height:0%;transition:height .9s cubic-bezier(.2,.7,.2,1)}
+    .j-line i.v{height:var(--vh,0%)}
+    .j-coin{display:none}
+  }
+
+  /* ── liveness ladder ── */
+  .ladder{margin-top:40px;position:relative;padding-left:30px}
+  .ladder::before{content:"";position:absolute;left:5px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,var(--amber),var(--amber-dim) 24%,var(--line) 96%)}
+  .rung{position:relative;padding:0 0 34px 0}
+  .rung:last-child{padding-bottom:0}
+  .rung::before{content:"";position:absolute;left:-30px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--card);border:2px solid var(--line);transition:border-color .3s,box-shadow .3s}
+  .rung.on::before{border-color:var(--amber);box-shadow:0 0 0 4px var(--amber-soft),0 0 14px rgba(232,184,75,.35)}
+  .rung .t{font-family:'IBM Plex Mono',monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  .rung.on .t{color:var(--amber)}
+  .rung h3{margin:7px 0 6px}
+  .rung p{color:var(--ink-2);font-size:.94rem;max-width:58ch}
+
+  /* ── coverage ── */
+  .covers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin-top:40px}
+  .cover{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px;transition:transform .25s,box-shadow .25s,border-color .25s}
+  .cover:hover{transform:translateY(-3px);box-shadow:var(--glow);border-color:var(--amber-line)}
+  .cover .t{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:11px}
+  .cover h3{margin-bottom:8px}
+  .cover p{font-size:.92rem;color:var(--ink-2)}
+
+  /* ── invariant ── */
+  .invariant{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:clamp(38px,6vw,56px) clamp(22px,4vw,34px);text-align:center}
+  .invariant blockquote{font-family:'Fraunces',serif;font-weight:500;font-style:italic;font-size:clamp(1.5rem,3.6vw,2.4rem);line-height:1.2;letter-spacing:-.015em;max-width:22ch;margin:0 auto 18px;color:var(--ink)}
+  .invariant p{color:var(--ink-2);max-width:62ch;margin:0 auto;font-size:.98rem}
+
+  /* ── live on arc ── */
+  .live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px;margin-top:36px}
+  .live-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;transition:transform .25s,box-shadow .25s,border-color .25s}
+  .live-card:hover{transform:translateY(-3px);box-shadow:var(--glow);border-color:var(--amber-line)}
+  .live-card .t{font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:10px}
+  .live-card .addr{font-family:'IBM Plex Mono',monospace;font-size:.8rem;word-break:break-all;display:block;margin-bottom:8px;color:var(--blue)}
+  .live-card .addr:hover{color:var(--amber)}
+  .live-card p{font-size:.86rem;color:var(--ink-3)}
+  .live-meta{font-family:'IBM Plex Mono',monospace;font-size:.76rem;color:var(--ink-3);margin-top:26px;line-height:1.9}
+  .live-meta b{color:var(--ink);font-weight:500}
+
+  /* ── footer ── */
+  footer{border-top:1px solid var(--line);padding:34px 0 56px;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .foot-mark{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .foot-right{font-size:.82rem;color:var(--ink-3);text-align:right;line-height:1.9}
+  .warn{color:var(--ember);font-weight:500}
+
+  /* ── motion ── */
+  @keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.72)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .fu{animation:fadeUp .8s cubic-bezier(.2,.7,.2,1) both}
+  .fu2{animation:fadeUp .8s .1s cubic-bezier(.2,.7,.2,1) both}
+  .fu3{animation:fadeUp .8s .2s cubic-bezier(.2,.7,.2,1) both}
+  .fu4{animation:fadeUp .8s .3s cubic-bezier(.2,.7,.2,1) both}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.06s}.reveal.d2{transition-delay:.12s}
+  .reveal.d3{transition-delay:.18s}.reveal.d4{transition-delay:.24s}
+
+  @media (max-width:760px){
+    .stats{grid-template-columns:1fr;gap:22px}
+    footer{flex-direction:column}
+    .foot-right{text-align:left}
+    .nav-links a{margin-left:0;margin-right:18px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .fu,.fu2,.fu3,.fu4{animation:none}
+    .dot,.ln-live{animation:none}
+    .reveal{opacity:1;transform:none;transition:none}
+    .j-step{opacity:1;transform:none}
+    .j-coin{display:none}
+    .j-line i{width:100%}
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <nav class="nav" aria-label="Main">
+      <div class="logo">Heir<span>loom</span></div>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#ladder">Mechanism</a>
+        <a href="#covers">Coverage</a>
+        <a href="#live">Live on Arc</a>
+        <a href="https://github.com/gnanam1990/heirloom">GitHub</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ══════════ HERO ══════════ -->
+  <section class="hero">
+    <div class="pill fu"><span class="dot"></span> Liveness-aware money · non-custodial</div>
+    <h1 class="fu2">The wallet that <span class="grad">can't be lost.</span></h1>
+    <p class="sub fu3">Not to death, not to forgetting, not to thieves. Money today assumes its owner is alive, present, and remembers everything. Heirloom removes that assumption — so funds never get stranded.</p>
+
+    <div class="cta fu4">
+      <a class="btn pri" href="/demo.html">Try the demo →</a>
+      <a class="btn sec" href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Live on Arc testnet ↗</a>
+      <a class="btn sec" href="https://github.com/gnanam1990/heirloom">View the contracts</a>
+    </div>
+
+    <!-- THE SIGNATURE ELEMENT — an ECG that beats while Active and flattens as the vault escalates -->
+    <div class="card ecg-card fu4" id="demo">
+      <div class="ecg-head">
+        <span class="lhs"><span class="dot" id="dot"></span> Vault · liveness ladder — accelerated demo</span>
+      </div>
+      <div class="ecg-state" id="state">Active</div>
+      <div class="ecg-sub" id="sub">Owner activity detected. Clock reset.</div>
+      <div class="ecg-wrap" aria-hidden="true">
+        <svg id="ecg" viewBox="0 0 600 132" preserveAspectRatio="none" role="img" aria-label="Heartbeat waveform">
+          <line class="ecg-base" x1="0" y1="74" x2="600" y2="74"></line>
+          <polyline class="ecg-line" id="ecgLine" points=""></polyline>
+        </svg>
+      </div>
+      <button class="demo-btn" id="beatBtn" type="button">Sign heartbeat</button>
+      <p class="demo-note">One signature — any transaction counts — resets everything. Silence escalates: nag → guardians → care mode → claimable.</p>
+    </div>
+
+    <div class="card live-now fu4">
+      <div class="ln-head">
+        <span class="ln-title"><span class="ln-live" id="lnLive"></span> Live right now on Arc</span>
+        <button class="ln-refresh" id="lnRefresh" type="button">Refresh</button>
+      </div>
+      <p class="ln-claim">This is a real vault, live on Arc testnet — verify every value on the explorer.</p>
+
+      <div class="ln-grid">
+        <div class="ln-cell"><span class="k">State</span><span class="v" id="lnState">—</span></div>
+        <div class="ln-cell"><span class="k">Balance</span><span class="v" id="lnBal">—<small>USDC · 6dp</small></span></div>
+        <div class="ln-cell"><span class="k">Next tier in</span><span class="v" id="lnNext">—</span></div>
+        <div class="ln-cell"><span class="k">Last activity</span><span class="v" id="lnLast">—</span></div>
+        <div class="ln-cell"><span class="k">Beneficiaries</span><span class="v" id="lnBen">—</span></div>
+        <div class="ln-cell"><span class="k">Guardians</span><span class="v" id="lnGuard">—</span></div>
+      </div>
+
+      <div class="ln-note" id="lnNote"></div>
+
+      <div class="ln-addr">
+        <code id="lnAddr">0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA</code>
+        <button class="ln-copy" id="lnCopy" type="button">Copy</button>
+        <a href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Explorer ↗</a>
+      </div>
+      <p class="ln-foot">Read directly from <b>rpc.testnet.arc.network</b> in your browser — read-only, no wallet, no connection prompt.<br>As of <span id="lnAsOf">—</span></p>
+    </div>
+
+    <div class="stats">
+      <div class="stat reveal"><b>20%+</b><span>of all Bitcoin estimated permanently lost to key loss</span></div>
+      <div class="stat reveal d1"><b>$190M</b><span>locked at QuadrigaCX when its sole keyholder died</span></div>
+      <div class="stat reveal d2"><b>₹ tens of thousands cr</b><span>sit unclaimed in Indian banks and insurers — money that never learned its owner was gone</span></div>
+    </div>
+  </section>
+
+  <!-- ══════════ PROBLEM ══════════ -->
+  <section id="problem">
+    <span class="eyebrow reveal">The failure mode</span>
+    <h2 class="reveal">Onchain assets have one silent failure mode</h2>
+    <p class="lede reveal d1">The cause never matters — a forgotten seed phrase, a death, a stolen device, a deprecated AI agent, a founder who held the only key. The outcome is identical: the owner can no longer sign, and the money strands forever.</p>
+  </section>
+
+  <!-- ══════════ HOW IT WORKS (plain language) ══════════ -->
+  <section id="how">
+    <span class="eyebrow reveal">How it works</span>
+    <h2 class="reveal">Five steps, in plain English</h2>
+    <p class="lede reveal d1">No wallets to install, no jargon to learn. This is the whole idea, start to finish.</p>
+
+    <div class="journey" id="journey">
+      <div class="j-line" aria-hidden="true"><i id="jLine"></i></div>
+      <div class="j-coin" id="jCoin" aria-hidden="true">$</div>
+
+      <ol class="j-steps">
+        <li class="j-step" data-step="0">
+          <div class="j-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 14.5c2.4.2 4.5 2 4.5 4.5"/></svg>
+          </div>
+          <div>
+            <span class="j-num">Step 1</span>
+            <h3>You set it up once</h3>
+            <p>Choose who should be looked after, and who you trust to help.</p>
+            <p class="j-tech">Technical: beneficiaries and M-of-N guardians written to the vault at construction.</p>
+          </div>
+        </li>
+
+        <li class="j-step" data-step="1">
+          <div class="j-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
+          </div>
+          <div>
+            <span class="j-num">Step 2</span>
+            <h3>Live your life</h3>
+            <p>Every time you use your money, it quietly knows you're still here.</p>
+            <p class="j-tech">Technical: any owner transaction stamps lastActivity, resetting the liveness ladder.</p>
+          </div>
+        </li>
+
+        <li class="j-step" data-step="2">
+          <div class="j-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 6-2.5 7-2.5 7h17S18 14 18 8Z"/><path d="M10.3 19a2 2 0 0 0 3.4 0"/></svg>
+          </div>
+          <div>
+            <span class="j-num">Step 3</span>
+            <h3>If you go quiet, it checks on you</h3>
+            <p>First reminders, just in case. Then the people you chose are told.</p>
+            <p class="j-tech">Technical: Nagging at 90 days, GuardianAlert at 180 — reminders are off-chain, the state is not.</p>
+          </div>
+        </li>
+
+        <li class="j-step" data-step="3">
+          <div class="j-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6Z"/><path d="M9.2 12.2 11.3 14l3.6-4"/></svg>
+          </div>
+          <div>
+            <span class="j-num">Step 4</span>
+            <h3>If you can't come back, bills still get paid</h3>
+            <p>Someone you picked can cover essentials — a set amount, to approved places only.</p>
+            <p class="j-tech">Technical: care mode, capped per period and per category, payable only to owner-approved addresses.</p>
+          </div>
+        </li>
+
+        <li class="j-step" data-step="4">
+          <div class="j-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 4l8.5 6.5"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg>
+          </div>
+          <div>
+            <span class="j-num">Step 5</span>
+            <h3>Your money finds its way home</h3>
+            <p>It reaches your family — in dollars, without them needing to understand any of this.</p>
+            <p class="j-tech">Technical: cascading claims to pre-registered payees; anyone may trigger, only the payee is paid.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ══════════ LADDER ══════════ -->
+  <section id="ladder">
+    <span class="eyebrow reveal">The mechanism · for technical readers</span>
+    <h2 class="reveal">The liveness ladder</h2>
+    <p class="lede reveal d1">Any activity resets the clock. Silence escalates — slowly, loudly, and always reversibly by one signature from the owner.</p>
+
+    <div class="ladder">
+      <div class="rung on reveal">
+        <span class="t">Any time</span>
+        <h3>Owner signs → everything resets</h3>
+        <p>Any transaction is a heartbeat. Travel, hospital, prison — declare a pause in advance and the clock waits.</p>
+      </div>
+      <div class="rung reveal d1">
+        <span class="t">3 months silent</span>
+        <h3>The nag</h3>
+        <p>Email and Telegram reminders. Most stories end here.</p>
+      </div>
+      <div class="rung reveal d2">
+        <span class="t">6 months</span>
+        <h3>Guardians alerted</h3>
+        <p>Your M-of-N circle is notified. They can propose rotating the vault to a new key — recovery for a forgotten seed — behind a 7-day timelock you can always veto.</p>
+      </div>
+      <div class="rung reveal d3">
+        <span class="t">9 months</span>
+        <h3>Care mode</h3>
+        <p>A designated guardian gets capped monthly spending for essentials — not the keys. Instantly revoked by any owner activity.</p>
+      </div>
+      <div class="rung reveal d4">
+        <span class="t">12 months</span>
+        <h3>The cascade</h3>
+        <p>Beneficiaries claim in your order: your own backup wallet first, then family, then a charity sink. Unclaimed tiers cascade — funds can never dead-end.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ COVERAGE ══════════ -->
+  <section id="covers">
+    <span class="eyebrow reveal">Coverage</span>
+    <h2 class="reveal">One mechanism. Five endings rewritten.</h2>
+    <p class="lede reveal d1">Recovery, inheritance, incapacity, continuity, and agent cleanup are the same contract seen from five directions.</p>
+
+    <div class="covers">
+      <div class="cover reveal"><span class="t">Forgotten keys</span><h3>Social recovery</h3><p>Guardians rotate the vault to your new key. The lock changes — the house doesn't. No seed phrase required, ever again.</p></div>
+      <div class="cover reveal d1"><span class="t">Death</span><h3>Inheritance without probate pain</h3><p>A non-crypto heir claims through an email link and receives dollars, not jargon. An encrypted note from you decrypts only on claim.</p></div>
+      <div class="cover reveal d2"><span class="t">Decline</span><h3>Care, not surrender</h3><p>Bills get paid by someone you chose, within limits you set, while you keep the keys.</p></div>
+      <div class="cover reveal d3"><span class="t">Founder risk</span><h3>Continuity for treasuries</h3><p>Org funds cascade to a co-founder multisig instead of dying with one person. The QuadrigaCX problem, closed.</p></div>
+      <div class="cover reveal d4"><span class="t">AI agents</span><h3>The watchdog</h3><p>An agent stops heartbeating — deprecated, crashed, abandoned — and its treasury walks home to the operator.</p></div>
+    </div>
+  </section>
+
+  <!-- ══════════ INVARIANT ══════════ -->
+  <section>
+    <div class="invariant reveal">
+      <blockquote>"The lock changed.<br>The house didn't."</blockquote>
+      <p>Every configuration change — heirs, guardians, timings — takes a 7-day timelock with notification and owner veto. A thief with your key cannot silently redirect your safety net. Guardians can propose; only contracts move funds.</p>
+    </div>
+  </section>
+
+  <!-- ══════════ LIVE ON ARC ══════════ -->
+  <section id="live">
+    <span class="eyebrow reveal">Deployed &amp; verified</span>
+    <h2 class="reveal">Live on Arc testnet</h2>
+    <p class="lede reveal d1">Both vaults are deployed, source-verified, and have run a full lifecycle on-chain — including an assisted claim, where a helper with no role triggered the payout and the registered heir received the funds.</p>
+
+    <div class="live-grid">
+      <div class="live-card reveal">
+        <span class="t">Production vault</span>
+        <a class="addr" href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA</a>
+        <p>Real ladder — 90 / 180 / 270 / 365 days. Source verified.</p>
+      </div>
+      <div class="live-card reveal d1">
+        <span class="t">Demo vault · short durations</span>
+        <a class="addr" href="https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa">0x0D884E62B1dE894df1651910849E534aDf4deaDa</a>
+        <p>Seconds-scale tiers so the cascade can be watched end to end. Demo-only — not a safety net.</p>
+      </div>
+      <div class="live-card reveal d2">
+        <span class="t">Assisted claim receipt</span>
+        <a class="addr" href="https://testnet.arcscan.app/tx/0x10937bae7014fa7d3f2cd972b46d6b69b49adb2744dfae804bd5dbfe06c8a14e">0x10937bae…06c8a14e</a>
+        <p>A helper triggered the claim. The heir was paid; the helper gained nothing and paid the gas.</p>
+      </div>
+    </div>
+
+    <p class="live-meta reveal d3">
+      Chain <b>Arc testnet · 5042002</b><br>
+      Explorer <b>testnet.arcscan.app</b><br>
+      Suite <b>126 contract tests</b>, including a stateful multi-actor invariant suite<br>
+      Addresses &amp; every transaction hash: <a href="https://github.com/gnanam1990/heirloom/blob/main/docs/addresses.md">docs/addresses.md</a>
+    </p>
+  </section>
+
+  <footer>
+    <div class="foot-mark">Heirloom · built on Arc</div>
+    <div class="foot-right">
+      <a href="https://testnet.arcscan.app/address/0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA">Live vault</a> ·
+      <a href="https://testnet.arcscan.app/address/0x0D884E62B1dE894df1651910849E534aDf4deaDa">Demo vault</a> ·
+      <a href="https://github.com/gnanam1990/heirloom">Source</a><br>
+      <span class="warn">Unaudited testnet software.</span> Do not use with real funds.
+    </div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── scroll reveals ── */
+  var revealables = document.querySelectorAll('.reveal');
+  if (reduced || !('IntersectionObserver' in window)) {
+    revealables.forEach(function(el){ el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {rootMargin: '0px 0px -8% 0px', threshold: 0.08});
+    revealables.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ═════════ LIVE ON-CHAIN VAULT CARD ═════════
+     Reads the real production vault straight from Arc testnet, read-only.
+
+     ONE eth_call, via Multicall3 — not seven, and not a JSON-RPC batch.
+     Arc's public RPC rate-limits PER SUB-REQUEST: a batch of 7 returns
+     "request limit reached" for most of them. Multicall3 is a single call the
+     limiter counts once. Same lesson as services/src/chain.ts.
+
+     On load and on manual Refresh only. No polling — a loop would trip the
+     limiter and leave every visitor looking at a broken card.            */
+  var VAULT = '0x0CA49eBD6fba33530287cb8eAE9aE565e80e18dA';
+  var RPC = 'https://rpc.testnet.arc.network';
+  var MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11';
+  var SELECTORS = [
+    '0xc19d93fb', // state()
+    '0x01e1d114', // totalAssets()
+    '0x5fd51b37', // lastActivity()
+    '0x03bad06e', // secondsUntilNextRung()
+    '0x734b2a7c', // beneficiaryCount()
+    '0xd5af4e20', // guardianThreshold()
+    '0x57c9ca14'  // isClaimed()
+  ];
+  var STATE_NAMES = ['Active','Nagging','Guardian alert','Care mode','Claimable','Claimed','Recovered'];
+
+  function pad(hex){ return String(hex).replace(/^0x/,'').padStart(64,'0'); }
+
+  /* aggregate3((address,bool,bytes)[]) for a list of no-arg selectors.
+     Verified byte-identical to `cast calldata` before shipping. */
+  function encodeAggregate3(target, selectors){
+    var n = selectors.length, head = '', tail = '', tupleSize = 5 * 32, i;
+    for (i = 0; i < n; i++){
+      head += pad((n * 32 + i * tupleSize).toString(16));
+      tail += pad(target) + pad('0') + pad('60') + pad('4') +
+              selectors[i].replace(/^0x/,'').padEnd(64,'0');
+    }
+    return '0x82ad56cb' + pad('20') + pad(n.toString(16)) + head + tail;
+  }
+
+  function decodeAggregate3(hex, n){
+    var h = hex.replace(/^0x/,''), out = [], base = 128, i, off, ok, len, data;
+    for (i = 0; i < n; i++){
+      off = parseInt(h.slice(base + i*64, base + (i+1)*64), 16) * 2 + 128;
+      ok  = parseInt(h.slice(off, off + 64), 16);
+      len = parseInt(h.slice(off + 128, off + 192), 16) * 2;
+      data = h.slice(off + 192, off + 192 + len);
+      out.push(ok && data ? BigInt('0x' + data) : null);
+    }
+    return out;
+  }
+
+  function usdc6(v){
+    var neg = v < 0n; if (neg) v = -v;
+    var whole = (v / 1000000n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (neg ? '-' : '') + whole + '.' + (v % 1000000n).toString().padStart(6,'0');
+  }
+  function duration(sec){
+    sec = Number(sec);
+    if (sec <= 0) return 'now';
+    var d = Math.floor(sec / 86400);
+    if (d > 0) return d + (d === 1 ? ' day' : ' days');
+    var h = Math.floor(sec / 3600);
+    if (h > 0) return h + (h === 1 ? ' hour' : ' hours');
+    var m = Math.floor(sec / 60);
+    return m > 0 ? m + (m === 1 ? ' min' : ' mins') : sec + 's';
+  }
+  function ago(ts){
+    var s = Math.floor(Date.now()/1000) - Number(ts);
+    if (s < 60) return 'just now';
+    var d = Math.floor(s/86400);
+    if (d > 0) return d + (d === 1 ? ' day ago' : ' days ago');
+    var h = Math.floor(s/3600);
+    if (h > 0) return h + (h === 1 ? ' hour ago' : ' hours ago');
+    return Math.floor(s/60) + ' mins ago';
+  }
+  var el = function(id){ return document.getElementById(id); };
+
+  function showFallback(reason){
+    /* Never a broken card. Show the last verified on-chain values, clearly
+       labelled as not-live, rather than dashes or a spinner that never ends. */
+    el('lnState').textContent = 'Active';
+    el('lnBal').innerHTML = '3.000000<small>USDC · 6dp</small>';
+    el('lnNext').textContent = '~90 days';
+    el('lnLast').textContent = 'at deployment';
+    el('lnBen').textContent = '3';
+    el('lnGuard').textContent = '2 of 3';
+    el('lnLive').className = 'ln-live stale';
+    var note = el('lnNote');
+    note.textContent = 'Could not reach the Arc RPC just now (' + reason + '), so these are the last ' +
+                       'values verified on-chain, not a live read. Press Refresh, or check the explorer.';
+    note.classList.add('show');
+    el('lnAsOf').textContent = 'cached — live read failed';
+  }
+
+  var inflight = false;
+  async function loadLive(){
+    if (inflight) return;
+    inflight = true;
+    var btn = el('lnRefresh');
+    btn.disabled = true; btn.textContent = 'Reading…';
+    el('lnNote').classList.remove('show');
+
+    try {
+      var ctl = new AbortController();
+      var t = setTimeout(function(){ ctl.abort(); }, 12000);
+      var res = await fetch(RPC, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 1, method: 'eth_call',
+          params: [{to: MULTICALL3, data: encodeAggregate3(VAULT, SELECTORS)}, 'latest']
+        }),
+        signal: ctl.signal
+      });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var body = await res.json();
+      if (body.error) throw new Error(body.error.message || 'rpc error');
+
+      var v = decodeAggregate3(body.result, SELECTORS.length);
+      if (v.some(function(x){ return x === null; })) throw new Error('incomplete result');
+
+      var isClaimed = v[6] === 1n;
+      var stateIdx = isClaimed ? 5 : Number(v[0]);
+
+      el('lnState').textContent = STATE_NAMES[stateIdx] || ('#' + stateIdx);
+      el('lnBal').innerHTML = usdc6(v[1]) + '<small>USDC · 6dp</small>';
+      el('lnNext').textContent = Number(v[3]) > 0 ? duration(v[3]) : '—';
+      el('lnLast').textContent = ago(v[2]);
+      el('lnBen').textContent = v[4].toString();
+      el('lnGuard').textContent = v[5].toString() + ' of 3';
+      el('lnLive').className = 'ln-live';
+      el('lnAsOf').textContent = new Date().toLocaleTimeString();
+    } catch (err) {
+      showFallback((err && err.name === 'AbortError') ? 'timed out' : (err.message || 'network error'));
+    } finally {
+      inflight = false;
+      btn.disabled = false; btn.textContent = 'Refresh';
+    }
+  }
+
+  el('lnRefresh').addEventListener('click', loadLive);
+  el('lnCopy').addEventListener('click', function(){
+    var b = this;
+    navigator.clipboard.writeText(VAULT).then(function(){
+      b.textContent = 'Copied'; b.classList.add('done');
+      setTimeout(function(){ b.textContent = 'Copy'; b.classList.remove('done'); }, 1600);
+    }).catch(function(){ b.textContent = 'Copy failed'; });
+  });
+  loadLive();
+
+  /* ═════════ HOW-IT-WORKS JOURNEY ═════════ */
+  var jSteps = document.querySelectorAll('.j-step'),
+      jLine = document.getElementById('jLine'),
+      jCoin = document.getElementById('jCoin'),
+      journey = document.getElementById('journey');
+
+  if (reduced) {
+    jSteps.forEach(function(st){ st.classList.add('on'); });
+    if (jLine) jLine.style.width = '100%';
+  } else if ('IntersectionObserver' in window && journey) {
+    var played = false;
+    var jio = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting || played) return;
+        played = true;
+        jio.unobserve(e.target);
+
+        var narrow = window.matchMedia('(max-width:860px)').matches;
+        jSteps.forEach(function(st, i){
+          setTimeout(function(){
+            st.classList.add('on');
+            var pct = (i / (jSteps.length - 1)) * 100;
+            if (narrow){ jLine.classList.add('v'); jLine.style.setProperty('--vh', pct + '%'); }
+            else { jLine.style.width = pct + '%'; }
+            /* the signature moment: on the last step, send the coin home */
+            if (i === jSteps.length - 1 && !narrow){
+              jCoin.classList.add('travel');
+              setTimeout(function(){ st.classList.add('arrive'); }, 2600);
+            }
+          }, i * 620);
+        });
+      });
+    }, {threshold: 0.35});
+    jio.observe(journey);
+  } else {
+    jSteps.forEach(function(st){ st.classList.add('on'); });
+  }
+
+  /* ═════════ HERO ECG — "alive because you're here" ═════════
+     The waveform IS the product. It beats strongly while Active; as the
+     accelerated demo escalates through the ladder the pulse slows and
+     flattens toward a dead line, and its colour warms from amber toward
+     ember. "Sign heartbeat" springs it back to a full, living beat.        */
+  var tiers = [
+    {at:0,   label:"Active",           sub:"Owner activity detected. Clock reset.",        warn:false, rung:0, vit:1.00},
+    {at:25,  label:"Nagging",          sub:"3 months silent → reminders sent.",            warn:false, rung:1, vit:0.70},
+    {at:50,  label:"Guardians alerted",sub:"6 months → your circle is notified.",          warn:true,  rung:2, vit:0.46},
+    {at:75,  label:"Care mode",        sub:"9 months → capped essentials spending only.",  warn:true,  rung:3, vit:0.22},
+    {at:100, label:"Claimable",        sub:"12 months → cascade begins. Funds walk home.", warn:true,  rung:4, vit:0.00}
+  ];
+  var stateEl = document.getElementById('state'),
+      subEl = document.getElementById('sub'),
+      beatBtn = document.getElementById('beatBtn'),
+      ecgLine = document.getElementById('ecgLine'),
+      rungs = document.querySelectorAll('#ladder .rung');
+  var p = 0, timer = null, vitTarget = 1, vit = 1, phase = 0, raf = null;
+
+  var AMBER = [232,184,75], EMBER = [201,86,63];
+  function mix(a, b, t){ return 'rgb(' +
+    Math.round(a[0]+(b[0]-a[0])*t) + ',' +
+    Math.round(a[1]+(b[1]-a[1])*t) + ',' +
+    Math.round(a[2]+(b[2]-a[2])*t) + ')'; }
+
+  /* one PQRST beat as a function of phase (0..1) */
+  function ecgAt(x){
+    function g(c,w){ var d=x-c; return Math.exp(-(d*d)/(2*w*w)); }
+    return 0.17*g(0.17,0.024)      /* P */
+         - 0.13*g(0.30,0.008)      /* Q */
+         + 1.00*g(0.335,0.0085)    /* R */
+         - 0.30*g(0.375,0.011)     /* S */
+         + 0.30*g(0.60,0.037);     /* T */
+  }
+
+  var W = 600, MID = 74, MAXAMP = 60, BEATS = 2.3;
+  function drawECG(){
+    var pts = '', i, ph, y;
+    for (i = 0; i <= W; i += 3){
+      ph = (((i / W) * BEATS) + phase) % 1;
+      y = MID - ecgAt(ph) * MAXAMP * vit;
+      pts += i + ',' + y.toFixed(1) + ' ';
+    }
+    ecgLine.setAttribute('points', pts);
+    ecgLine.style.stroke = mix(AMBER, EMBER, 1 - vit);
+  }
+
+  function loop(){
+    vit += (vitTarget - vit) * 0.05;
+    phase = (phase + (0.0015 + 0.011 * Math.max(vit, 0))) % 1;
+    drawECG();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function render(){
+    var cur = tiers[0];
+    for (var i = 0; i < tiers.length; i++){ if (p >= tiers[i].at) cur = tiers[i]; }
+    stateEl.textContent = cur.label;
+    stateEl.className = 'ecg-state' + (cur.warn ? ' warn' : '');
+    subEl.textContent = cur.sub;
+    vitTarget = cur.vit;
+    for (var r = 0; r < rungs.length; r++){ rungs[r].classList.toggle('on', r === cur.rung); }
+  }
+  function tick(){ p = Math.min(100, p + 0.5); render(); if (p >= 100){ clearInterval(timer); timer = null; } }
+  function start(){ if (!timer && !reduced) timer = setInterval(tick, 120); }
+
+  beatBtn.addEventListener('click', function(){ p = 0; render(); start(); });
+  render();
+
+  /* Always paint one frame synchronously so the waveform is visible even before
+     the first requestAnimationFrame fires (e.g. a tab that loads in the
+     background, where rAF is paused until it becomes visible). */
+  drawECG();
+
+  if (reduced){
+    /* static, legible waveform at full vitality — no animation */
+    vit = 1; phase = 0; drawECG();
+  } else {
+    raf = requestAnimationFrame(loop);
+    start();
+  }
+})();
+</script>
+</body>
+</html>
